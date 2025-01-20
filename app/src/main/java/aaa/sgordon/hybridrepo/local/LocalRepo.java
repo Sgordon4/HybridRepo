@@ -83,18 +83,19 @@ public class LocalRepo {
 	}
 
 
-	public LFile putFileProps(@NonNull LFile fileProps, @NonNull String prevChecksum, @NonNull String prevAttrHash)
-			throws ContentsNotFoundException, IllegalStateException {
+	public LFile putFileProps(@NonNull LFile fileProps, @NonNull String prevChecksum, @NonNull String prevAttrHash) throws IllegalStateException {
 		Log.i(TAG, String.format("PUT LOCAL FILE PROPS called with fileUID='%s'", fileProps.fileuid));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 
+		/*	//We may not have the contents on local if the file is server-only
 		//Check if the repo is missing the file contents. If so, we can't commit the file changes
 		try {
 			getContentProps(fileProps.checksum);
 		} catch (ContentsNotFoundException e) {
 			throw new ContentsNotFoundException("Cannot put props, system is missing file contents! FileUID='" + fileProps.fileuid + "'");
 		}
+		 */
 
 
 		//Make sure the hashes match if any were passed
@@ -133,6 +134,7 @@ public class LocalRepo {
 	// Contents
 	//---------------------------------------------------------------------------------------------
 
+	//TODO Check with Cleanup to decide if we should show content or if it's delete marked
 	public LContent getContentProps(@NonNull String name) throws ContentsNotFoundException {
 		Log.i(TAG, String.format("\nGET LOCAL CONTENT PROPS called with name='%s'", name));
 		LContent props = database.getContentDao().get(name);

@@ -20,6 +20,8 @@ import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.Utilities;
 import aaa.sgordon.hybridrepo.local.types.LContent;
 
+//TODO Move the content out of the data dir in case the app is deleted
+
 public class LContentHelper {
 	private static final String TAG = "Hyb.Local.Cont";
 	private static final String contentDir = "content";
