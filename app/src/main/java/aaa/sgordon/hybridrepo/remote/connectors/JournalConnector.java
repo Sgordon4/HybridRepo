@@ -1,22 +1,23 @@
 package aaa.sgordon.hybridrepo.remote.connectors;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import aaa.sgordon.hybridrepo.remote.types.SJournal;
+import aaa.sgordon.hybridrepo.remote.types.RJournal;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class JournalConnector {
@@ -31,18 +32,40 @@ public class JournalConnector {
 	}
 
 
-	//---------------------------------------------------------------------------------------------
-	// Get
-	//---------------------------------------------------------------------------------------------
-
-
-	//Get all journal entries after a given journalID
+	//TODO Include device ID
 	@Nullable
-	public List<SJournal> getJournalEntriesAfter(int journalID) throws IOException {
-		//Log.i(TAG, String.format("\nGET JOURNAL called with journalID='%s'", journalID));
+	public Set<UUID> getFilesChangedForAccount(@NonNull UUID accountUID, long journalID) throws IOException {
+		String url = Paths.get(baseServerUrl, "journal", "fileuids", ""+journalID).toString();
+
+		FormBody.Builder builder = new FormBody.Builder();
+		builder.add("accountUID", accountUID.toString());
+		//builder.add("fileUID", fileUID.toString());
+		RequestBody body = builder.build();
+
+		Request request = new Request.Builder().url(url).put(body).build();
+		try (Response response = client.newCall(request).execute()) {
+			if (!response.isSuccessful())
+				throw new IOException("Unexpected code " + response.code());
+			if(response.body() == null)
+				throw new IOException("Response body is null");
+
+			String responseData = response.body().string();
+			return new Gson().fromJson(responseData, new TypeToken< Set<RJournal> >(){}.getType());
+		}
+	}
+
+
+	//TODO Include device ID
+	@Nullable
+	public List<RJournal> getChangesForFile(UUID fileUID, long journalID) throws IOException {
 		String url = Paths.get(baseServerUrl, "journal", ""+journalID).toString();
 
-		Request request = new Request.Builder().url(url).build();
+		FormBody.Builder builder = new FormBody.Builder();
+		//builder.add("accountUID", accountUID.toString());
+		builder.add("fileUID", fileUID.toString());
+		RequestBody body = builder.build();
+
+		Request request = new Request.Builder().url(url).put(body).build();
 		try (Response response = client.newCall(request).execute()) {
 			if (!response.isSuccessful())
 				throw new IOException("Unexpected code " + response.code());
@@ -50,37 +73,15 @@ public class JournalConnector {
 				throw new IOException("Response body is null");
 
 			String responseData = response.body().string();
-
-			//return journals;
-			return new Gson().fromJson(responseData, new TypeToken< List<SJournal> >(){}.getType());
-		}
-		//If we don't get anything back from the server (no internet, server down, etc), just pretend we got nothing
-		catch (SocketTimeoutException | ConnectException e) {
-			return new ArrayList<>();
+			return new Gson().fromJson(responseData, new TypeToken< List<RJournal> >(){}.getType());
 		}
 	}
 
 
-	//Get all journal entries for a given fileUID
-	public List<SJournal> getJournalEntriesForFile(UUID fileUID) throws IOException {
-		//Log.i(TAG, String.format("\nGET JOURNAL BY ID called with fileUID='%s'", fileUID));
-		String url = Paths.get(baseServerUrl, "journal", "file", fileUID.toString()).toString();
-
-		Request request = new Request.Builder().url(url).build();
-		try (Response response = client.newCall(request).execute()) {
-			if (!response.isSuccessful())
-				throw new IOException("Unexpected code " + response.code());
-			if(response.body() == null)
-				throw new IOException("Response body is null");
-
-			String responseData = response.body().string();
-			return new Gson().fromJson(responseData, new TypeToken< List<SJournal> >(){}.getType());
-		}
-	}
 
 
 	//LONGPOLL all journal entries after a given journalID
-	public List<SJournal> longpollJournalEntriesAfter(int journalID) throws IOException, TimeoutException {
+	public List<RJournal> longpollJournalEntriesAfter(int journalID) throws IOException, TimeoutException {
 		//Log.i(TAG, String.format("\nLONGPOLL JOURNAL called with journalID='%s'", journalID));
 		String url = Paths.get(baseServerUrl, "journal", "longpoll", ""+journalID).toString();
 
@@ -94,7 +95,7 @@ public class JournalConnector {
 				throw new IOException("Response body is null");
 
 			String responseData = response.body().string();
-			return new Gson().fromJson(responseData, new TypeToken< List<SJournal> >(){}.getType());
+			return new Gson().fromJson(responseData, new TypeToken< List<RJournal> >(){}.getType());
 		}
 	}
 }

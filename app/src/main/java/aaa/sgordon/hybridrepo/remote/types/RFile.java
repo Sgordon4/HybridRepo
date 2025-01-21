@@ -1,7 +1,6 @@
 package aaa.sgordon.hybridrepo.remote.types;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -10,7 +9,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-public class SFile {
+public class RFile {
 	public static final String defaultChecksum = "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
 	public static final String defaultAttrHash = "44136FA355B3678A1146AD16F7E8649E94FB4FC21FE77E8310C060F61CAAFF8A";
 
@@ -40,7 +39,7 @@ public class SFile {
 
 
 
-	public SFile(@NonNull UUID fileuid, @NonNull UUID accountuid) {
+	public RFile(@NonNull UUID fileuid, @NonNull UUID accountuid) {
 		this.fileuid = fileuid;
 		this.accountuid = accountuid;
 
@@ -74,13 +73,13 @@ public class SFile {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		SFile sFile = (SFile) o;
-		return isdir == sFile.isdir && islink == sFile.islink && filesize == sFile.filesize &&
-				Objects.equals(fileuid, sFile.fileuid) && Objects.equals(accountuid, sFile.accountuid) &&
-				Objects.equals(checksum, sFile.checksum) && Objects.equals(userattr, sFile.userattr) &&
-				Objects.equals(attrhash, sFile.attrhash) && Objects.equals(changetime, sFile.changetime) &&
-				Objects.equals(modifytime, sFile.modifytime) && Objects.equals(accesstime, sFile.accesstime) &&
-				Objects.equals(createtime, sFile.createtime);
+		RFile rFile = (RFile) o;
+		return isdir == rFile.isdir && islink == rFile.islink && filesize == rFile.filesize &&
+				Objects.equals(fileuid, rFile.fileuid) && Objects.equals(accountuid, rFile.accountuid) &&
+				Objects.equals(checksum, rFile.checksum) && Objects.equals(userattr, rFile.userattr) &&
+				Objects.equals(attrhash, rFile.attrhash) && Objects.equals(changetime, rFile.changetime) &&
+				Objects.equals(modifytime, rFile.modifytime) && Objects.equals(accesstime, rFile.accesstime) &&
+				Objects.equals(createtime, rFile.createtime);
 	}
 
 	@Override

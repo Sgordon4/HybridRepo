@@ -1,10 +1,9 @@
 package aaa.sgordon.hybridrepo.hybrid.types;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import aaa.sgordon.hybridrepo.local.types.LFile;
-import aaa.sgordon.hybridrepo.remote.types.SFile;
+import aaa.sgordon.hybridrepo.remote.types.RFile;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -112,7 +111,7 @@ public class HFile {
 		return hFile;
 	}
 
-	public static HFile fromServerFile(@NonNull SFile server) {
+	public static HFile fromServerFile(@NonNull RFile server) {
 		HFile hFile = new HFile(server.fileuid, server.accountuid);
 		hFile.isdir = server.isdir;
 		hFile.islink = server.islink;
@@ -145,8 +144,8 @@ public class HFile {
 		return local;
 	}
 
-	public SFile toServerFile() {
-		SFile server = new SFile(fileuid, accountuid);
+	public RFile toServerFile() {
+		RFile server = new RFile(fileuid, accountuid);
 		server.isdir = isdir;
 		server.islink = islink;
 		server.filesize = filesize;

@@ -6,6 +6,7 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,10 +28,12 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.Utilities;
+import aaa.sgordon.hybridrepo.hybrid.jobs.SyncWorkers;
 import aaa.sgordon.hybridrepo.hybrid.types.HFile;
 import aaa.sgordon.hybridrepo.local.LocalRepo;
 import aaa.sgordon.hybridrepo.local.types.LContent;
 import aaa.sgordon.hybridrepo.local.types.LFile;
+import aaa.sgordon.hybridrepo.local.types.LJournal;
 import aaa.sgordon.hybridrepo.remote.RemoteRepo;
 
 public class HybridAPI {
@@ -39,7 +42,7 @@ public class HybridAPI {
 	private final LocalRepo localRepo;
 	private final RemoteRepo remoteRepo;
 
-	private final Map<UUID, ReentrantLock> localLocks;
+
 
 
 
@@ -50,32 +53,24 @@ public class HybridAPI {
 		private static final HybridAPI INSTANCE = new HybridAPI();
 	}
 	private HybridAPI() {
-		localLocks = new HashMap<>();
-
 		localRepo = LocalRepo.getInstance();
 		remoteRepo = RemoteRepo.getInstance();
 	}
 
 
-
-	public void lock(@NonNull UUID fileUID) {
-		if(!localLocks.containsKey(fileUID))
-			localLocks.put(fileUID, new ReentrantLock());
-
-		localLocks.get(fileUID).lock();
-	}
-	public void unlock(@NonNull UUID fileUID) {
-		if(!localLocks.containsKey(fileUID))
-			return;
-
-		localLocks.get(fileUID).unlock();
+	public void startListeningForChanges(@NonNull UUID accountUID) {
+		SyncWorkers.JournalWatcher.enqueue(accountUID);
 	}
 
-	private void ensureLockHeld(@NonNull UUID fileUID) {
-		ReentrantLock lock = localLocks.get(fileUID);
-		if(lock == null || !lock.isHeldByCurrentThread()) throw new IllegalStateException("Cannot write, lock not held!");
-	}
 
+
+
+	public void lockLocal(@NonNull UUID fileUID) {
+		localRepo.lock(fileUID);
+	}
+	public void unlockLocal(@NonNull UUID fileUID) {
+		localRepo.unlock(fileUID);
+	}
 
 
 	//---------------------------------------------------------------------------------------------
@@ -105,8 +100,63 @@ public class HybridAPI {
 	}
 
 
-	public void writeFile(@NonNull UUID fileUID, @NonNull byte[] content, @NonNull String prevChecksum) throws FileNotFoundException, IOException {
-		ensureLockHeld(fileUID);
+	public HFile createFile(@NonNull UUID accountUID, boolean isDir, boolean isLink) {
+		UUID fileUID = UUID.randomUUID();
+		LFile newFile = new LFile(fileUID, accountUID);
+
+		newFile.isdir = isDir;
+		newFile.islink = isLink;
+
+		//Create blank file contents
+		localRepo.writeContents(HFile.defaultChecksum, "".getBytes());
+
+		newFile = localRepo.putFileProps(newFile, "", "");
+		return HFile.fromLocalFile(newFile);
+	}
+
+
+	public void deleteFile(@NonNull UUID fileUID) {
+		localRepo.deleteFileProps(fileUID);
+	}
+
+
+	//---------------------------------------------------------------------------------------------
+
+
+	public HFile setAttributes(@NonNull UUID fileUID, @NonNull JsonObject attributes, @NonNull String prevAttrHash) throws FileNotFoundException {
+		localRepo.ensureLockHeld(fileUID);
+
+		LFile oldProps = localRepo.getFileProps(fileUID);
+		LFile newProps = localRepo.getFileProps(fileUID);
+
+		//Check that the current attribute checksum matches what we were given to ensure we won't be overwriting any data
+		String currAttrHash = oldProps.attrhash;
+		if(!Objects.equals(currAttrHash, prevAttrHash))
+			throw new IllegalStateException(String.format("Cannot set attributes, checksums don't match! FileUID='%s'", fileUID));
+
+
+		//Get the checksum of the attributes
+		String newAttrHash;
+		try {
+			byte[] hash = MessageDigest.getInstance("SHA-256").digest(attributes.toString().getBytes());
+			newAttrHash = Utilities.bytesToHex(hash);
+		} catch (NoSuchAlgorithmException e) { throw new RuntimeException(e); }
+
+
+		//And update the properties with the new info received
+		newProps.userattr = attributes;
+		newProps.attrhash = newAttrHash;
+		newProps.changetime = Instant.now().getEpochSecond();
+
+
+
+		return HFile.fromLocalFile( localRepo.putFileProps(newProps, newProps.checksum, oldProps.attrhash) );
+	}
+
+
+
+	public HFile writeFile(@NonNull UUID fileUID, @NonNull byte[] content, @NonNull String prevChecksum) throws FileNotFoundException {
+		localRepo.ensureLockHeld(fileUID);
 
 		//Check that the current file checksum matches what we were given to ensure we won't be overwriting any data
 		HFile props = getFileProps(fileUID);
@@ -122,72 +172,54 @@ public class HybridAPI {
 			newChecksum = Utilities.bytesToHex(hash);
 		} catch (NoSuchAlgorithmException e) { throw new RuntimeException(e); }
 
-		//Actually write the data
-		LContent contentProps = localRepo.writeContents(newChecksum, content);
 
+		//Actually write the contents
+		LContent contentProps = localRepo.writeContents(newChecksum, content);
 
 		//And update the properties with the new info received
 		props.checksum = contentProps.checksum;
 		props.filesize = contentProps.size;
 		props.changetime = Instant.now().getEpochSecond();
 		props.modifytime = Instant.now().getEpochSecond();
-		localRepo.putFileProps(props.toLocalFile(), currChecksum, props.attrhash);
+
+		return HFile.fromLocalFile(localRepo.putFileProps(props.toLocalFile(), currChecksum, props.attrhash));
 	}
 
 
-	public void setAttributes(@NonNull UUID fileUID, @NonNull Map<String, String> attributes, @NonNull String prevAttrHash) throws FileNotFoundException {
-		ensureLockHeld(fileUID);
-
-		//Check that the current attribute checksum matches what we were given to ensure we won't be overwriting any data
+	public HFile writeFile(@NonNull UUID fileUID, @NonNull Uri content, @NonNull String checksum, @NonNull String prevChecksum) throws FileNotFoundException {
+		localRepo.ensureLockHeld(fileUID);
 		HFile props = getFileProps(fileUID);
-		String currAttrHash = props.attrhash;
-		if(!Objects.equals(currAttrHash, prevAttrHash))
-			throw new IllegalStateException(String.format("Cannot set attributes, checksums don't match! FileUID='%s'", fileUID));
+
+		//Check that the current file checksum matches what we were given to ensure we won't be overwriting any data
+		String currChecksum = props.checksum;
+		if(!Objects.equals(currChecksum, prevChecksum))
+			throw new IllegalStateException(String.format("Cannot write, checksums don't match! FileUID='%s'", fileUID));
 
 
-		//Get the checksum of the attributes
-		String newAttrHash;
-		try {
-			byte[] hash = MessageDigest.getInstance("SHA-256").digest(attributes.toString().getBytes());
-			newAttrHash = Utilities.bytesToHex(hash);
-		} catch (NoSuchAlgorithmException e) { throw new RuntimeException(e); }
-
+		//Actually write the contents
+		LContent contentProps = localRepo.writeContents(checksum, content);
 
 		//And update the properties with the new info received
-		props.userattr = new Gson().toJsonTree(attributes).getAsJsonObject();
-		props.attrhash = newAttrHash;
+		props.checksum = contentProps.checksum;
+		props.filesize = contentProps.size;
 		props.changetime = Instant.now().getEpochSecond();
-		localRepo.putFileProps(props.toLocalFile(), props.checksum, prevAttrHash);
-	}
+		props.modifytime = Instant.now().getEpochSecond();
 
-
-	public void deleteFile(@NonNull UUID fileUID) {
-		ensureLockHeld(fileUID);
-
-		localRepo.deleteFileProps(fileUID);
+		return HFile.fromLocalFile(localRepo.putFileProps(props.toLocalFile(), currChecksum, props.attrhash));
 	}
 
 
 
-	public LFile createSpecialFile(boolean isDir, boolean isLink) {
-		throw new RuntimeException("Stub!");
-	}
-	public LFile importFile(@NonNull UUID accountUID, @NonNull Uri source) throws IOException {
-		UUID newFileUID = UUID.randomUUID();
+	public HFile importFile(@NonNull Uri content, @NonNull String prevChecksum) throws IOException {
+		UUID fileUID = UUID.randomUUID();
 
-		//In case the source is a web-url, save the content to a temp file for efficiency
+		//Write the source to a temp file so we can get the checksum
 		Context context = MyApplication.getAppContext();
 		File appCacheDir = context.getCacheDir();
-		File tempFile = new File(appCacheDir, newFileUID.toString());
+		File tempFile = Files.createTempFile(appCacheDir.toPath(), fileUID.toString(), null).toFile();
 
-		if(!tempFile.exists()) {
-			Files.createDirectories(tempFile.toPath().getParent());
-			Files.createFile(tempFile.toPath());
-		}
-
-		//Write the source to a temp file, getting the checksum while we do so
 		String checksum;
-		try (InputStream in = new URL(source.toString()).openStream();
+		try (InputStream in = new URL(content.toString()).openStream();
 			 FileOutputStream out = new FileOutputStream(tempFile);
 			 DigestOutputStream dos = new DigestOutputStream(out, MessageDigest.getInstance("SHA-256"))) {
 
@@ -202,20 +234,18 @@ public class HybridAPI {
 		catch (NoSuchAlgorithmException e) { throw new RuntimeException(e); }
 
 
-
 		//Write the temp file contents to the content repo
 		LContent contentProps = localRepo.writeContents(checksum, Uri.fromFile(tempFile));
 
-		//Make new file props with the updated content properties
-		LFile newFile = new LFile(newFileUID, accountUID);
-		newFile.checksum = contentProps.checksum;
-		newFile.filesize = contentProps.size;
-		newFile.changetime = Instant.now().getEpochSecond();
-		newFile.modifytime = Instant.now().getEpochSecond();
+		//Create a new file
+		HFile fileProps = createFile(fileUID, false, false);
 
+		//Update the file props with the updated content properties
+		fileProps.checksum = contentProps.checksum;
+		fileProps.filesize = contentProps.size;
+		fileProps.changetime = Instant.now().getEpochSecond();
+		fileProps.modifytime = Instant.now().getEpochSecond();
 
-		//Write the new file props to local
-		newFile = localRepo.putFileProps(newFile, "", "");
-		return newFile;
+		return HFile.fromLocalFile( localRepo.putFileProps(fileProps.toLocalFile(), prevChecksum, fileProps.attrhash) );
 	}
 }

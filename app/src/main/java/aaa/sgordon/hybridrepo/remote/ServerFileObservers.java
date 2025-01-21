@@ -3,7 +3,7 @@ package aaa.sgordon.hybridrepo.remote;
 import android.util.Log;
 
 import aaa.sgordon.hybridrepo.MyApplication;
-import aaa.sgordon.hybridrepo.remote.types.SJournal;
+import aaa.sgordon.hybridrepo.remote.types.RJournal;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -33,7 +33,7 @@ public class ServerFileObservers {
 	}
 
 
-	public void notifyObservers(int journalID, SJournal file) {
+	public void notifyObservers(int journalID, RJournal file) {
 		for (SFileObservable listener : listeners) {
 			listener.onFileUpdate(journalID, file);
 		}
@@ -98,10 +98,10 @@ public class ServerFileObservers {
 	//Check the server for new journal entries. Returns the largest journal ID found.
 	public int longpoll(int journalID) throws IOException, TimeoutException {
 		//Try to get any new journal entries. The request is designed to hang until new data is made
-		List<SJournal> entries = RemoteRepo.getInstance().longpollJournalEntriesAfter(journalID);
+		List<RJournal> entries = RemoteRepo.getInstance().longpollJournalEntriesAfter(journalID);
 
 		//If we get any entries back, notify the observers
-		for(SJournal entry : entries) {
+		for(RJournal entry : entries) {
 			int objJournalID = entry.journalid;
 			notifyObservers(objJournalID, entry);
 		}
@@ -119,6 +119,6 @@ public class ServerFileObservers {
 
 
 	public interface SFileObservable {
-		void onFileUpdate(int journalID, SJournal file);
+		void onFileUpdate(int journalID, RJournal file);
 	}
 }

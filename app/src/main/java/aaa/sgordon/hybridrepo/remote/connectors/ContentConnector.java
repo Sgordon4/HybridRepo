@@ -19,7 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import aaa.sgordon.hybridrepo.hybrid.ContentsNotFoundException;
-import aaa.sgordon.hybridrepo.remote.types.SContent;
+import aaa.sgordon.hybridrepo.remote.types.RContent;
 import okhttp3.FormBody;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -44,7 +44,7 @@ public class ContentConnector {
 	// Props
 	//---------------------------------------------------------------------------------------------
 
-	public SContent getProps(@NonNull String name) throws IOException {
+	public RContent getProps(@NonNull String name) throws IOException {
 		Log.i(TAG, String.format("\nGET CONTENT PROPS called with name='%s'", name));
 		String url = Paths.get(baseServerUrl, "content", name).toString();
 
@@ -58,14 +58,14 @@ public class ContentConnector {
 				throw new IOException("Response body is null");
 
 			String responseData = response.body().string();
-			return new Gson().fromJson(responseData, SContent.class);
+			return new Gson().fromJson(responseData, RContent.class);
 		}
 	}
 
 
 	//TODO Have this triggered serverside by an IBM rule, not from manually calling it here
 	//Make an entry in the server's database table for this content
-	public SContent putProps(@NonNull String name, int size) throws IOException {
+	public RContent putProps(@NonNull String name, int size) throws IOException {
 		Log.i(TAG, "PUTTING CONTENT PROPS...");
 		String url = Paths.get(baseServerUrl, "content").toString();
 
@@ -84,7 +84,7 @@ public class ContentConnector {
 				throw new IOException("Response body is null");
 
 			String responseData = response.body().string();
-			return new Gson().fromJson(responseData, SContent.class);
+			return new Gson().fromJson(responseData, RContent.class);
 		}
 	}
 

@@ -22,22 +22,39 @@ public class LJournal {
 	@NonNull
 	public UUID accountuid;
 
-	@Nullable
-	public String filehash;
-	@Nullable
-	public String attrhash;
+	@NonNull
+	@ColumnInfo(defaultValue = "{}")
+	public JsonObject properties;
 
 	@ColumnInfo(defaultValue = "CURRENT_TIMESTAMP")
 	public Long changetime;
 
 
 
-	public LJournal(@NonNull LFile file) {
-		this.fileuid = file.fileuid;
-		this.accountuid = file.accountuid;
-		this.filehash = file.checksum;
-		this.attrhash = file.attrhash;
-		this.changetime = file.changetime;
+	public LJournal(@Nullable LFile oldProps, @NonNull LFile newProps) {
+		this.fileuid = newProps.fileuid;
+		this.accountuid = newProps.accountuid;
+		this.changetime = newProps.changetime;
+
+		this.properties = computeChanges(oldProps, newProps);
+	}
+
+
+	private JsonObject computeChanges(@Nullable LFile oldProps, @NonNull LFile newProps) {
+		JsonObject changes = new JsonObject();
+
+		if(oldProps == null || !Objects.equals(oldProps.checksum, newProps.checksum))
+			changes.addProperty("checksum", newProps.checksum);
+		if(oldProps == null || !Objects.equals(oldProps.attrhash, newProps.attrhash))
+			changes.addProperty("attrhash", newProps.attrhash);
+		if(oldProps == null || !Objects.equals(oldProps.accesstime, newProps.accesstime))
+			changes.addProperty("accesstime", newProps.accesstime);
+		if(oldProps == null || !Objects.equals(oldProps.changetime, newProps.changetime))
+			changes.addProperty("changetime", newProps.changetime);
+		if(oldProps == null || !Objects.equals(oldProps.modifytime, newProps.modifytime))
+			changes.addProperty("modifytime", newProps.modifytime);
+
+		return changes;
 	}
 
 
@@ -60,12 +77,11 @@ public class LJournal {
 		if (object == null || getClass() != object.getClass()) return false;
 		LJournal that = (LJournal) object;
 		return Objects.equals(fileuid, that.fileuid) && Objects.equals(accountuid, that.accountuid) &&
-				Objects.equals(filehash, that.filehash) && Objects.equals(attrhash, that.attrhash) &&
-				Objects.equals(changetime, that.changetime);
+				Objects.equals(properties, that.properties) && Objects.equals(changetime, that.changetime);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(fileuid, accountuid, filehash, attrhash, changetime);
+		return Objects.hash(fileuid, accountuid, properties, changetime);
 	}
 }

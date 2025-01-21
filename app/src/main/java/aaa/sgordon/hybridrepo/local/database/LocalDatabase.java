@@ -38,6 +38,7 @@ public abstract class LocalDatabase extends RoomDatabase {
 			Builder<LocalDatabase> dbBuilder = Room.databaseBuilder(context, LocalDatabase.class, DB_NAME);
 
 
+			/*
 			dbBuilder.addCallback(new Callback() {
 				@Override
 				public void onCreate(@NonNull SupportSQLiteDatabase db) {
@@ -72,6 +73,7 @@ public abstract class LocalDatabase extends RoomDatabase {
 					// (local -> server, vice versa).
 				}
 			});
+			 */
 
 
 			//SQL Logging:

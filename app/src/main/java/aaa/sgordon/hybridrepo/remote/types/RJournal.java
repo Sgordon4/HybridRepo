@@ -1,17 +1,14 @@
 package aaa.sgordon.hybridrepo.remote.types;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-public class SJournal {
+public class RJournal {
 	public int journalid;
 
 	@NonNull
@@ -19,32 +16,24 @@ public class SJournal {
 	@NonNull
 	public UUID accountuid;
 
-	@Nullable
-	public String filehash;
-	@Nullable
-	public String attrhash;
+	@NonNull
+	public JsonObject properties;
 
 	public Long changetime;
 
 
-	public SJournal(@NonNull UUID fileuid, @NonNull UUID accountuid) {
-		this.fileuid = fileuid;
-		this.accountuid = accountuid;
-		this.changetime = Instant.now().getEpochSecond();
-	}
-	public SJournal(@NonNull SFile file) {
+
+	public RJournal(@NonNull RFile file, @NonNull JsonObject changes) {
 		this.fileuid = file.fileuid;
 		this.accountuid = file.accountuid;
-		this.filehash = file.checksum;
-		this.attrhash = file.attrhash;
+		this.properties = changes;
 		this.changetime = file.changetime;
 	}
 
 
 
 	public JsonObject toJson() {
-		Gson gson = new GsonBuilder().create();
-		return gson.toJsonTree(this).getAsJsonObject();
+		return new Gson().toJsonTree(this).getAsJsonObject();
 	}
 
 	@NonNull
@@ -59,14 +48,13 @@ public class SJournal {
 	public boolean equals(Object object) {
 		if (this == object) return true;
 		if (object == null || getClass() != object.getClass()) return false;
-		SJournal that = (SJournal) object;
+		RJournal that = (RJournal) object;
 		return Objects.equals(fileuid, that.fileuid) && Objects.equals(accountuid, that.accountuid) &&
-				Objects.equals(filehash, that.filehash) && Objects.equals(attrhash, that.attrhash) &&
-				Objects.equals(changetime, that.changetime);
+				Objects.equals(properties, that.properties) && Objects.equals(changetime, that.changetime);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(fileuid, accountuid, filehash, attrhash, changetime);
+		return Objects.hash(fileuid, accountuid, properties, changetime);
 	}
 }

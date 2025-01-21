@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-public class SAccount {
+public class RAccount {
 	@NonNull
 	public UUID accountuid;
 	@NonNull
@@ -31,10 +31,10 @@ public class SAccount {
 	public Long createtime;
 
 
-	public SAccount(){
+	public RAccount(){
 		this(UUID.randomUUID(), UUID.randomUUID());
 	}
-	public SAccount(@NonNull UUID accountuid, @NonNull UUID rootfileuid) {
+	public RAccount(@NonNull UUID accountuid, @NonNull UUID rootfileuid) {
 		this.accountuid = accountuid;
 		this.rootfileuid = rootfileuid;
 
@@ -67,11 +67,11 @@ public class SAccount {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		SAccount sAccount = (SAccount) o;
-		return isdeleted == sAccount.isdeleted && Objects.equals(logintime, sAccount.logintime) &&
-				Objects.equals(changetime, sAccount.changetime) && Objects.equals(createtime, sAccount.createtime) &&
-				Objects.equals(accountuid, sAccount.accountuid) && Objects.equals(rootfileuid, sAccount.rootfileuid) &&
-				Objects.equals(email, sAccount.email) && Objects.equals(displayname, sAccount.displayname) && Objects.equals(password, sAccount.password);
+		RAccount rAccount = (RAccount) o;
+		return isdeleted == rAccount.isdeleted && Objects.equals(logintime, rAccount.logintime) &&
+				Objects.equals(changetime, rAccount.changetime) && Objects.equals(createtime, rAccount.createtime) &&
+				Objects.equals(accountuid, rAccount.accountuid) && Objects.equals(rootfileuid, rAccount.rootfileuid) &&
+				Objects.equals(email, rAccount.email) && Objects.equals(displayname, rAccount.displayname) && Objects.equals(password, rAccount.password);
 	}
 
 	@Override

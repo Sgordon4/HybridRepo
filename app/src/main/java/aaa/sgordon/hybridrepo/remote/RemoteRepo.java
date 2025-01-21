@@ -9,15 +9,6 @@ import android.util.Pair;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import aaa.sgordon.hybridrepo.hybrid.ContentsNotFoundException;
-import aaa.sgordon.hybridrepo.remote.connectors.AccountConnector;
-import aaa.sgordon.hybridrepo.remote.connectors.ContentConnector;
-import aaa.sgordon.hybridrepo.remote.connectors.FileConnector;
-import aaa.sgordon.hybridrepo.remote.connectors.JournalConnector;
-import aaa.sgordon.hybridrepo.remote.types.SAccount;
-import aaa.sgordon.hybridrepo.remote.types.SContent;
-import aaa.sgordon.hybridrepo.remote.types.SFile;
-import aaa.sgordon.hybridrepo.remote.types.SJournal;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -30,11 +21,21 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
+import aaa.sgordon.hybridrepo.hybrid.ContentsNotFoundException;
+import aaa.sgordon.hybridrepo.remote.connectors.AccountConnector;
+import aaa.sgordon.hybridrepo.remote.connectors.ContentConnector;
+import aaa.sgordon.hybridrepo.remote.connectors.FileConnector;
+import aaa.sgordon.hybridrepo.remote.connectors.JournalConnector;
+import aaa.sgordon.hybridrepo.remote.types.RAccount;
+import aaa.sgordon.hybridrepo.remote.types.RContent;
+import aaa.sgordon.hybridrepo.remote.types.RFile;
+import aaa.sgordon.hybridrepo.remote.types.RJournal;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -83,7 +84,7 @@ public class RemoteRepo {
 	// Account
 	//---------------------------------------------------------------------------------------------
 
-	public SAccount getAccountProps(@NonNull UUID accountUID) throws FileNotFoundException, ConnectException {
+	public RAccount getAccountProps(@NonNull UUID accountUID) throws FileNotFoundException, ConnectException {
 		Log.i(TAG, String.format("GET SERVER ACCOUNT PROPS called with accountUID='%s'", accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
@@ -99,11 +100,11 @@ public class RemoteRepo {
 		}
 
 		if(accountProps == null) throw new FileNotFoundException("Account not found! ID: '"+accountUID);
-		return new Gson().fromJson(accountProps, SAccount.class);
+		return new Gson().fromJson(accountProps, RAccount.class);
 	}
 
 
-	public void putAccountProps(@NonNull SAccount accountProps) throws ConnectException {
+	public void putAccountProps(@NonNull RAccount accountProps) throws ConnectException {
 		Log.i(TAG, String.format("PUT SERVER ACCOUNT PROPS called with accountUID='%s'", accountProps.accountuid));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
@@ -124,7 +125,7 @@ public class RemoteRepo {
 	//---------------------------------------------------------------------------------------------
 
 	@NonNull
-	public SFile getFileProps(@NonNull UUID fileUID) throws FileNotFoundException, ConnectException {
+	public RFile getFileProps(@NonNull UUID fileUID) throws FileNotFoundException, ConnectException {
 		Log.v(TAG, String.format("GET SERVER FILE PROPS called with fileUID='%s'", fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
@@ -142,7 +143,7 @@ public class RemoteRepo {
 	}
 
 
-	public SFile putFileProps(@NonNull SFile fileProps, @Nullable String prevFileHash, @Nullable String prevAttrHash)
+	public RFile putFileProps(@NonNull RFile fileProps, @Nullable String prevFileHash, @Nullable String prevAttrHash)
 			throws ContentsNotFoundException, IllegalStateException, ConnectException {
 		Log.i(TAG, String.format("PUT SERVER FILE PROPS called with fileUID='%s'", fileProps.fileuid));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
@@ -198,7 +199,7 @@ public class RemoteRepo {
 	//---------------------------------------------------------------------------------------------
 
 
-	public SContent getContentProps(@NonNull String name) throws ContentsNotFoundException, ConnectException {
+	public RContent getContentProps(@NonNull String name) throws ContentsNotFoundException, ConnectException {
 		try {
 			return contentConn.getProps(name);
 		} catch (ContentsNotFoundException e) {
@@ -244,7 +245,7 @@ public class RemoteRepo {
 	//Source file must be on-disk
 	//Returns the fileSize of the provided source
 	//WARNING: DOES NOT UPDATE FILE PROPERTIES
-	public SContent uploadData(@NonNull String name, @NonNull File source) throws FileNotFoundException, ConnectException {
+	public RContent uploadData(@NonNull String name, @NonNull File source) throws FileNotFoundException, ConnectException {
 		Log.i(TAG, "\nPUT SERVER CONTENTS called with source='"+source.getPath()+"'");
 
 		if (!source.exists()) throw new FileNotFoundException("Source file not found! Path: '"+source.getPath()+"'");
@@ -315,13 +316,14 @@ public class RemoteRepo {
 	// Journal
 	//---------------------------------------------------------------------------------------------
 
-
-	public List<SJournal> getJournalEntriesAfter(int journalID) throws ConnectException {
-		Log.i(TAG, String.format("GET SERVER JOURNALS AFTER ID called with journalID='%s'", journalID));
-		if(isOnMainThread()) throw new NetworkOnMainThreadException();
+	@NonNull
+	public Set<UUID> getFilesChangedForAccountAfter(@NonNull UUID accountUID, int journalID) throws ConnectException {
+		Log.i(TAG, String.format("REMOTE JOURNAL GET FILEUIDS CHANGED FOR ACCOUNT called with journalID='%s', accountUID='%s'", journalID, accountUID));
+		if (isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
-			return journalConn.getJournalEntriesAfter(journalID);
+			Set<UUID> filesChanged = journalConn.getFilesChangedForAccount(accountUID, journalID);
+			return filesChanged != null ? filesChanged : new HashSet<>();
 		} catch (ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
@@ -331,12 +333,15 @@ public class RemoteRepo {
 		}
 	}
 
-	public List<SJournal> getJournalEntriesForFile(UUID fileUID) throws ConnectException {
-		Log.i(TAG, String.format("GET SERVER JOURNALS FOR FILE called with fileUID='%s'", fileUID));
+
+	@NonNull
+	public List<RJournal> getChangesForFileAfter(@NonNull UUID fileUID, int journalID) throws ConnectException {
+		Log.i(TAG, String.format("LOCAL JOURNAL GET JOURNALS FOR FILE called with journalID='%s', fileUID='%s'", journalID, fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
-			return journalConn.getJournalEntriesForFile(fileUID);
+			List<RJournal> journals = journalConn.getChangesForFile(fileUID, journalID);
+			return journals != null ? journals : new ArrayList<>();
 		} catch (ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
@@ -346,6 +351,8 @@ public class RemoteRepo {
 		}
 	}
 
+
+	/*
 	public List<SJournal> longpollJournalEntriesAfter(int journalID) throws ConnectException, TimeoutException, SocketTimeoutException {
 		Log.i(TAG, String.format("LONGPOLL SERVER JOURNALS AFTER ID called with journalID='%s'", journalID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
@@ -362,7 +369,7 @@ public class RemoteRepo {
 			throw new RuntimeException(e);
 		}
 	}
-
+	 */
 
 
 	//---------------------------------------------------------------------------------------------

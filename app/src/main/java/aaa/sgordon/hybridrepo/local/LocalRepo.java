@@ -13,22 +13,29 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
 
 import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.Utilities;
 import aaa.sgordon.hybridrepo.hybrid.ContentsNotFoundException;
+import aaa.sgordon.hybridrepo.local.database.LocalDatabase;
 import aaa.sgordon.hybridrepo.local.types.LAccount;
 import aaa.sgordon.hybridrepo.local.types.LContent;
-import aaa.sgordon.hybridrepo.local.database.LocalDatabase;
 import aaa.sgordon.hybridrepo.local.types.LFile;
 import aaa.sgordon.hybridrepo.local.types.LJournal;
 
 public class LocalRepo {
 	private static final String TAG = "Hyb.Local";
 	public final LocalDatabase database;
+
+	private final Map<UUID, ReentrantLock> locks;
 
 
 	public static LocalRepo getInstance() {
@@ -38,6 +45,7 @@ public class LocalRepo {
 		private static final LocalRepo INSTANCE = new LocalRepo();
 	}
 	private LocalRepo() {
+		locks = new HashMap<>();
 		database = new LocalDatabase.DBBuilder().newInstance( MyApplication.getAppContext() );
 	}
 
@@ -46,12 +54,30 @@ public class LocalRepo {
 	}
 
 
+	public void lock(@NonNull UUID fileUID) {
+		if(!locks.containsKey(fileUID))
+			locks.put(fileUID, new ReentrantLock());
+
+		locks.get(fileUID).lock();
+	}
+	public void unlock(@NonNull UUID fileUID) {
+		if(!locks.containsKey(fileUID))
+			return;
+
+		locks.get(fileUID).unlock();
+	}
+	public void ensureLockHeld(@NonNull UUID fileUID) {
+		ReentrantLock lock = locks.get(fileUID);
+		if(lock == null || !lock.isHeldByCurrentThread()) throw new IllegalStateException("Cannot write, lock not held!");
+	}
+
+
 	//---------------------------------------------------------------------------------------------
 	// Account
 	//---------------------------------------------------------------------------------------------
 
 	public LAccount getAccountProps(@NonNull UUID accountUID) throws FileNotFoundException {
-		Log.i(TAG, String.format("GET LOCAL ACCOUNT PROPS called with accountUID='%s'", accountUID));
+		Log.i(TAG, String.format("LOCAL GET ACCOUNT PROPS called with accountUID='%s'", accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		LAccount account = database.getAccountDao().loadByUID(accountUID);
@@ -61,7 +87,7 @@ public class LocalRepo {
 
 
 	public void putAccountProps(@NonNull LAccount accountProps) {
-		Log.i(TAG, String.format("PUT LOCAL ACCOUNT PROPS called with accountUID='%s'", accountProps.accountuid));
+		Log.i(TAG, String.format("LOCAL PUT ACCOUNT PROPS called with accountUID='%s'", accountProps.accountuid));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		database.getAccountDao().put(accountProps);
@@ -74,7 +100,7 @@ public class LocalRepo {
 
 	@NonNull
 	public LFile getFileProps(@NonNull UUID fileUID) throws FileNotFoundException {
-		Log.v(TAG, String.format("GET LOCAL FILE PROPS called with fileUID='%s'", fileUID));
+		Log.v(TAG, String.format("LOCAL GET FILE PROPS called with fileUID='%s'", fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		LFile file = database.getFileDao().get(fileUID);
@@ -84,9 +110,9 @@ public class LocalRepo {
 
 
 	public LFile putFileProps(@NonNull LFile fileProps, @NonNull String prevChecksum, @NonNull String prevAttrHash) throws IllegalStateException {
-		Log.i(TAG, String.format("PUT LOCAL FILE PROPS called with fileUID='%s'", fileProps.fileuid));
+		Log.i(TAG, String.format("LOCAL PUT FILE PROPS called with fileUID='%s'", fileProps.fileuid));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
-
+		ensureLockHeld(fileProps.fileuid);
 
 		/*	//We may not have the contents on local if the file is server-only
 		//Check if the repo is missing the file contents. If so, we can't commit the file changes
@@ -118,13 +144,18 @@ public class LocalRepo {
 
 		//Create/update the file
 		database.getFileDao().put(fileProps);
+
+		//And add a journal entry
+		LJournal journal = new LJournal(oldFile, fileProps);
+		database.getJournalDao().insert(journal);
 		return fileProps;
 	}
 
 
 	public void deleteFileProps(@NonNull UUID fileUID) {
-		Log.i(TAG, String.format("DELETE LOCAL FILE PROPS called with fileUID='%s'", fileUID));
+		Log.i(TAG, String.format("LOCAL DELETE FILE PROPS called with fileUID='%s'", fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
+		ensureLockHeld(fileUID);
 
 		database.getFileDao().delete(fileUID);
 	}
@@ -136,16 +167,16 @@ public class LocalRepo {
 
 	//TODO Check with Cleanup to decide if we should show content or if it's delete marked
 	public LContent getContentProps(@NonNull String name) throws ContentsNotFoundException {
-		Log.i(TAG, String.format("\nGET LOCAL CONTENT PROPS called with name='%s'", name));
+		Log.i(TAG, String.format("\nLOCAL GET CONTENT PROPS called with name='%s'", name));
 		LContent props = database.getContentDao().get(name);
 		if(props == null) throw new ContentsNotFoundException(name);
 		return props;
 	}
 
 
-	@Nullable
+	@NonNull
 	public Uri getContentUri(@NonNull String name) throws ContentsNotFoundException {
-		Log.v(TAG, String.format("\nGET LOCAL CONTENT URI called with name='"+name+"'"));
+		Log.v(TAG, String.format("\nLOCAL GET CONTENT URI called with name='"+name+"'"));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		//Throws a ContentsNotFound exception if the content properties don't exist
@@ -156,23 +187,43 @@ public class LocalRepo {
 	}
 
 
-	public LContent writeContents(@NonNull String name, @NonNull byte[] contents) throws IOException {
-		Log.v(TAG, String.format("\nWRITE LOCAL CONTENTS BYTE called with name='"+name+"'"));
+	public LContent writeContents(@NonNull String name, @NonNull byte[] contents) {
+		Log.v(TAG, String.format("\nLOCAL WRITE CONTENTS BYTE called with name='"+name+"'"));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
-		return LContentHelper.writeContents(name, contents);
+		try {
+			//Just grab the properties if the content already exists
+			return getContentProps(name);
+		} catch (ContentsNotFoundException e) {
+			//If the content doesn't already exist, write it
+			try {
+				return LContentHelper.writeContents(name, contents);
+			} catch (IOException ex) {
+				throw new RuntimeException(ex);
+			}
+		}
 	}
 
-	public LContent writeContents(@NonNull String name, @NonNull Uri source) throws IOException {
-		Log.v(TAG, String.format("\nWRITE LOCAL CONTENTS URI called with name='"+name+"'"));
+	public LContent writeContents(@NonNull String name, @NonNull Uri source) {
+		Log.v(TAG, String.format("\nLOCAL WRITE CONTENTS URI called with name='"+name+"'"));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
-		return LContentHelper.writeContents(name, source);
+		try {
+			//Just grab the properties if the content already exists
+			return getContentProps(name);
+		} catch (ContentsNotFoundException e) {
+			//If the content doesn't already exist, write it
+			try {
+				return LContentHelper.writeContents(name, source);
+			} catch (IOException ex) {
+				throw new RuntimeException(ex);
+			}
+		}
 	}
 
 
 	public void deleteContents(@NonNull String name) {
-		Log.i(TAG, String.format("\nDELETE LOCAL CONTENTS called with name='"+name+"'"));
+		Log.i(TAG, String.format("\nLOCAL DELETE CONTENTS called with name='"+name+"'"));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		//Remove the database entry first to avoid race conditions
@@ -188,23 +239,21 @@ public class LocalRepo {
 	//---------------------------------------------------------------------------------------------
 
 	@NonNull
-	public List<LJournal> getJournalEntriesAfter(int journalID) {
-		Log.i(TAG, String.format("GET LOCAL JOURNALS AFTER ID called with journalID='%s'", journalID));
+	public Set<UUID> getFilesChangedForAccountAfter(@NonNull UUID accountUID, int journalID) {
+		Log.i(TAG, String.format("LOCAL JOURNAL GET FILEUIDS CHANGED FOR ACCOUNT called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
-
-		List<LJournal> journals = database.getJournalDao().loadAllAfterID(journalID);
-		return journals != null ? journals : new ArrayList<>();
+		Set<UUID> filesChanged = database.getJournalDao().getFilesChangedForAccount(accountUID, journalID);
+		return filesChanged != null ? filesChanged : new HashSet<>();
 	}
 
 
 	@NonNull
-	public List<LJournal> getJournalEntriesForFile(@NonNull UUID fileUID) {
-		Log.i(TAG, String.format("GET LOCAL JOURNALS FOR FILE called with fileUID='%s'", fileUID));
+	public List<LJournal> getChangesForFileAfter(@NonNull UUID fileUID, int journalID) {
+		Log.i(TAG, String.format("LOCAL JOURNAL GET JOURNALS FOR FILE called with journalID='%s', fileUID='%s'", journalID, fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
-
-		List<LJournal> journals = database.getJournalDao().loadAllByFileUID(fileUID);
+		List<LJournal> journals = database.getJournalDao().getChangesForFile(fileUID, journalID);
 		return journals != null ? journals : new ArrayList<>();
 	}
 }

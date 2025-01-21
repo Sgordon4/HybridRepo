@@ -3,7 +3,7 @@ package aaa.sgordon.hybridrepo.remote.connectors;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import aaa.sgordon.hybridrepo.remote.types.SFile;
+import aaa.sgordon.hybridrepo.remote.types.RFile;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -42,7 +42,7 @@ public class FileConnector {
 	}
 
 	@NonNull
-	public SFile getProps(@NonNull UUID fileUID) throws FileNotFoundException, IOException {
+	public RFile getProps(@NonNull UUID fileUID) throws FileNotFoundException, IOException {
 		//Log.i(TAG, String.format("\nGET FILE called with fileUID='"+fileUID+"'"));
 		String url = Paths.get(baseServerUrl, "files", fileUID.toString()).toString();
 
@@ -58,7 +58,7 @@ public class FileConnector {
 
 			String responseData = response.body().string();
 
-			return new Gson().fromJson(responseData.trim(), SFile.class);
+			return new Gson().fromJson(responseData.trim(), RFile.class);
 		}
 	}
 
@@ -69,7 +69,7 @@ public class FileConnector {
 
 
 	//Create or update a file entry in the database
-	public SFile upsert(@NonNull SFile file, @Nullable String prevFileHash, @Nullable String prevAttrHash)
+	public RFile upsert(@NonNull RFile file, @Nullable String prevFileHash, @Nullable String prevAttrHash)
 			throws IllegalStateException, IOException {
 		//Log.i(TAG, "\nUPSERT FILE called");
 		String base = Paths.get(baseServerUrl, "files").toString();
@@ -110,7 +110,7 @@ public class FileConnector {
 				throw new IOException("Response body is null");
 
 			String responseData = response.body().string();
-			return new Gson().fromJson(responseData, SFile.class);
+			return new Gson().fromJson(responseData, RFile.class);
 		}
 	}
 	

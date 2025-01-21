@@ -8,14 +8,14 @@ import com.google.gson.JsonObject;
 
 import java.time.Instant;
 
-public class SContent {
+public class RContent {
 	@NonNull
 	public String name;
 	public int size;
 	public Long createtime;
 
 
-	public SContent(@NonNull String name, int size) {
+	public RContent(@NonNull String name, int size) {
 		this.name = name;
 		this.size = size;
 		this.createtime = Instant.now().getEpochSecond();
