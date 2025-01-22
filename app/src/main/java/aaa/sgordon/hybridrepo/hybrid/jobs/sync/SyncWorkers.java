@@ -1,4 +1,4 @@
-package aaa.sgordon.hybridrepo.hybrid.jobs;
+package aaa.sgordon.hybridrepo.hybrid.jobs.sync;
 
 import android.content.Context;
 import android.util.Log;

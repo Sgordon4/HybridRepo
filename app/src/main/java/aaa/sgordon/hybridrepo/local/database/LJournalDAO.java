@@ -13,7 +13,7 @@ import java.util.UUID;
 import aaa.sgordon.hybridrepo.local.types.LJournal;
 
 @Dao
-public interface LJournalDao {
+public interface LJournalDAO {
 
 	@Query("SELECT DISTINCT fileuid FROM journal WHERE accountuid = :accountUID AND journalid > :journalID")
 	Set<UUID> getFilesChangedForAccount(UUID accountUID, long journalID);

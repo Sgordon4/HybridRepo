@@ -1,4 +1,4 @@
-package aaa.sgordon.hybridrepo.hybrid.jobs;
+package aaa.sgordon.hybridrepo.hybrid.jobs.sync;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -6,33 +6,18 @@ import android.net.Uri;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.work.Constraints;
-import androidx.work.Data;
-import androidx.work.ExistingWorkPolicy;
-import androidx.work.NetworkType;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkInfo;
-import androidx.work.WorkManager;
-import androidx.work.WorkQuery;
-import androidx.work.Worker;
-import androidx.work.WorkerParameters;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.net.ConnectException;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.hybrid.ContentsNotFoundException;
 import aaa.sgordon.hybridrepo.hybrid.HybridAPI;
 import aaa.sgordon.hybridrepo.hybrid.types.HFile;
 import aaa.sgordon.hybridrepo.local.LocalRepo;
-import aaa.sgordon.hybridrepo.local.types.LContent;
 import aaa.sgordon.hybridrepo.local.types.LFile;
 import aaa.sgordon.hybridrepo.local.types.LJournal;
 import aaa.sgordon.hybridrepo.remote.RemoteRepo;

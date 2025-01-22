@@ -3,12 +3,10 @@ package aaa.sgordon.hybridrepo.local.database;
 import android.content.Context;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
-import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import aaa.sgordon.hybridrepo.local.types.LAccount;
 import aaa.sgordon.hybridrepo.local.types.LContent;
@@ -25,13 +23,13 @@ public abstract class LocalDatabase extends RoomDatabase {
 
 	public abstract LAccountDAO getAccountDao();
 	public abstract LFileDAO getFileDao();
-	public abstract LJournalDao getJournalDao();
-	public abstract LContentDao getContentDao();
+	public abstract LJournalDAO getJournalDao();
+	public abstract LContentDAO getContentDao();
 
 
 
 	public static class DBBuilder {
-		private static final String DB_NAME = "glocal.db";
+		private static final String DB_NAME = "hlocal.db";
 
 		public LocalDatabase newInstance(Context context) {
 

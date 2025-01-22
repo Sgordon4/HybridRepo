@@ -5,7 +5,6 @@ import android.net.Uri;
 
 import androidx.annotation.NonNull;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import java.io.File;
@@ -20,20 +19,16 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.locks.ReentrantLock;
 
 import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.Utilities;
-import aaa.sgordon.hybridrepo.hybrid.jobs.SyncWorkers;
+import aaa.sgordon.hybridrepo.hybrid.jobs.sync.SyncWorkers;
 import aaa.sgordon.hybridrepo.hybrid.types.HFile;
 import aaa.sgordon.hybridrepo.local.LocalRepo;
 import aaa.sgordon.hybridrepo.local.types.LContent;
 import aaa.sgordon.hybridrepo.local.types.LFile;
-import aaa.sgordon.hybridrepo.local.types.LJournal;
 import aaa.sgordon.hybridrepo.remote.RemoteRepo;
 
 public class HybridAPI {

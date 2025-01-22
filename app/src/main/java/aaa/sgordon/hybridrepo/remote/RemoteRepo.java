@@ -126,19 +126,26 @@ public class RemoteRepo {
 
 	@NonNull
 	public RFile getFileProps(@NonNull UUID fileUID) throws FileNotFoundException, ConnectException {
-		Log.v(TAG, String.format("GET SERVER FILE PROPS called with fileUID='%s'", fileUID));
+		Log.v(TAG, String.format("SERVER GET FILE PROPS called with fileUID='%s'", fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
 			return fileConn.getProps(fileUID);
-		} catch (FileNotFoundException e) {
-			throw e;
-		} catch (ConnectException e) {
+		} catch (FileNotFoundException | ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
 			throw new ConnectException();
 		} catch (IOException e) {
 			throw new RuntimeException();
+		}
+	}
+	public boolean doesFileExist(@NonNull UUID fileUID) throws ConnectException {
+		Log.v(TAG, "SERVER GET FILE PROPS EXIST called.");
+		try {
+			getFileProps(fileUID);
+			return true;
+		} catch (FileNotFoundException e) {
+			return false;
 		}
 	}
 
@@ -150,23 +157,19 @@ public class RemoteRepo {
 
 
 		//Check if the server is missing the file contents. If so, we can't commit the file changes
-		if(fileProps.checksum != null) {
-			try {
-				contentConn.getProps(fileProps.checksum);
-			} catch (ContentsNotFoundException e) {
-				throw new ContentsNotFoundException("Cannot put props, system is missing file contents!");
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
+		try {
+			contentConn.getProps(fileProps.checksum);
+		} catch (ContentsNotFoundException e) {
+			throw new ContentsNotFoundException("Cannot put props, system is missing file contents!");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
 		}
 
 
 		//Now that we've confirmed the contents exist, create/update the file metadata
 		try {
 			return fileConn.upsert(fileProps, prevFileHash, prevAttrHash);
-		} catch (IllegalStateException e) {
-			throw e;
-		} catch (ConnectException e) {
+		} catch (IllegalStateException | ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
 			throw new ConnectException();
@@ -176,15 +179,13 @@ public class RemoteRepo {
 	}
 
 
-	public void deleteFileProps(@NonNull UUID fileUID) throws ConnectException {
+	public void deleteFileProps(@NonNull UUID fileUID) throws FileNotFoundException, ConnectException {
 		Log.i(TAG, String.format("DELETE SERVER FILE called with fileUID='%s'", fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
 			fileConn.delete(fileUID);
-		} catch (FileNotFoundException e) {
-			//Do nothing
-		} catch (ConnectException e) {
+		} catch (FileNotFoundException | ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
 			throw new ConnectException();

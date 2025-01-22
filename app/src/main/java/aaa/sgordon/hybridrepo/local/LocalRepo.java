@@ -10,6 +10,7 @@ import androidx.annotation.Nullable;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -106,6 +107,15 @@ public class LocalRepo {
 		LFile file = database.getFileDao().get(fileUID);
 		if(file == null) throw new FileNotFoundException("File not found! ID: '"+fileUID+"'");
 		return file;
+	}
+	public boolean doesFileExist(@NonNull UUID fileUID) {
+		Log.v(TAG, "LOCAL GET FILE PROPS EXIST called.");
+		try {
+			getFileProps(fileUID);
+			return true;
+		} catch (FileNotFoundException e) {
+			return false;
+		}
 	}
 
 

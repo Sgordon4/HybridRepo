@@ -15,6 +15,7 @@ import aaa.sgordon.hybridrepo.local.types.LFile;
 /*
 For live UI updates, see "Write Observable Queries" in
 https://developer.android.com/training/data-storage/room/async-queries#guava-livedata
+Or Room's InvalidationTracker
 
 Timestamp update help:
 https://medium.com/@stephenja/timestamps-with-android-room-f3fd57b48250

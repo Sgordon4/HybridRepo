@@ -8,7 +8,7 @@ import androidx.room.Upsert;
 import aaa.sgordon.hybridrepo.local.types.LContent;
 
 @Dao
-public interface LContentDao {
+public interface LContentDAO {
 	@Query("SELECT * FROM content WHERE name = :name")
 	LContent get(String name);
 
