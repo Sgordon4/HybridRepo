@@ -21,10 +21,7 @@ public class HZone {
 	@ColumnInfo(defaultValue = "false")
 	public boolean isRemote;
 
-
-	public HZone(@NonNull UUID fileuid) {
-		this(fileuid, true, false);
-	}
+	
 	public HZone(@NonNull UUID fileuid, boolean isLocal, boolean isRemote) {
 		this.fileuid = fileuid;
 		this.isLocal = isLocal;
