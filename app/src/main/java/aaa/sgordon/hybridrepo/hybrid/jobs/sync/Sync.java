@@ -117,6 +117,11 @@ public class Sync {
 				//Make sure to sync attributes too. Also, one repo may have file changes while another has attr changes.
 				//Watch out for newly deleted and un-deleted files
 
+				//Loop through each set of changes, compiling them into a JsonObject
+				//Compare, if differences then merge those
+				//May be worth grabbing all journals for file, not just the recent ones
+
+
 				//TODO Merging is very hard, and my brain is very smooth.
 				// Therefore, I am setting it so the local file is ALWAYS written to remote instead of merging.
 				// This IF condition should never occur for a one-device-per-account setup like we'll have initially,
