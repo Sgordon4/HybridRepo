@@ -124,6 +124,31 @@ public class RemoteRepo {
 	// File
 	//---------------------------------------------------------------------------------------------
 
+
+
+
+
+
+
+	//Create file(accountUID, isDir, isLink)
+	//Create should actually just take an RFile or whatever, throw if file exists
+
+	//Update accesstime?
+	// vs
+	//Update timestamps?	<-- This one
+
+	//putChecksum, putAttrs
+	//Write: checksum, filesize, modifytime, changetime (do we want to fetch filesize?)
+	//SetAttr: attrs, changetime
+
+
+	//Delete
+
+
+
+	//---------------------------------------------------------------------------------------------
+
+
 	@NonNull
 	public RFile getFileProps(@NonNull UUID fileUID) throws FileNotFoundException, ConnectException {
 		Log.v(TAG, String.format("SERVER GET FILE PROPS called with fileUID='%s'", fileUID));

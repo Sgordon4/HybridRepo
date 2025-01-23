@@ -145,7 +145,7 @@ public class LocalRepo {
 		}
 
 
-		//Hash the user attributes
+		//Hash the user attributes in the updated props
 		try {
 			byte[] hash = MessageDigest.getInstance("SHA-256").digest(fileProps.userattr.toString().getBytes());
 			fileProps.attrhash = Utilities.bytesToHex(hash);

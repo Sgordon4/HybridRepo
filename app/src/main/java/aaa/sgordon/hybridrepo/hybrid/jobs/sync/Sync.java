@@ -35,13 +35,11 @@ public class Sync {
 	private int lastSyncLocalID;
 	private int lastSyncRemoteID;
 
-	private final HybridAPI hybridAPI;
 	private final LocalRepo localRepo;
 	private final RemoteRepo remoteRepo;
 
 
 	private Sync() {
-		hybridAPI = HybridAPI.getInstance();
 		localRepo = LocalRepo.getInstance();
 		remoteRepo = RemoteRepo.getInstance();
 
@@ -174,15 +172,4 @@ public class Sync {
 			localRepo.unlock(fileUID);
 		}
 	}
-
-
-
-	//---------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
 }

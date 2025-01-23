@@ -8,11 +8,8 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
 import java.util.Arrays;
-import java.util.HashMap;
 
 import aaa.sgordon.hybridrepo.MyApplication;
-import aaa.sgordon.hybridrepo.local.LocalRepo;
-import aaa.sgordon.hybridrepo.local.database.LocalDatabase;
 
 @Database(entities = {HZone.class}, version = 1)
 public abstract class HybridHelpDatabase extends RoomDatabase {
