@@ -17,7 +17,7 @@ public class RJournal {
 	public UUID accountuid;
 
 	@NonNull
-	public JsonObject properties;
+	public JsonObject changes;
 
 	public Long changetime;
 
@@ -26,7 +26,7 @@ public class RJournal {
 	public RJournal(@NonNull RFile file, @NonNull JsonObject changes) {
 		this.fileuid = file.fileuid;
 		this.accountuid = file.accountuid;
-		this.properties = changes;
+		this.changes = changes;
 		this.changetime = file.changetime;
 	}
 
@@ -50,11 +50,11 @@ public class RJournal {
 		if (object == null || getClass() != object.getClass()) return false;
 		RJournal that = (RJournal) object;
 		return Objects.equals(fileuid, that.fileuid) && Objects.equals(accountuid, that.accountuid) &&
-				Objects.equals(properties, that.properties) && Objects.equals(changetime, that.changetime);
+				Objects.equals(changes, that.changes) && Objects.equals(changetime, that.changetime);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(fileuid, accountuid, properties, changetime);
+		return Objects.hash(fileuid, accountuid, changes, changetime);
 	}
 }
