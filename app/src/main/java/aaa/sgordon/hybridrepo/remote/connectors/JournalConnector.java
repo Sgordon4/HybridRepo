@@ -3,7 +3,6 @@ package aaa.sgordon.hybridrepo.remote.connectors;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import aaa.sgordon.hybridrepo.remote.types.RJournal;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -14,6 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import aaa.sgordon.hybridrepo.remote.types.RJournal;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;

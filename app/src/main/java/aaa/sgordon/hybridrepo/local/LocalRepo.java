@@ -6,11 +6,9 @@ import android.os.NetworkOnMainThreadException;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.ConnectException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -253,8 +251,11 @@ public class LocalRepo {
 		Log.i(TAG, String.format("LOCAL JOURNAL GET FILEUIDS CHANGED FOR ACCOUNT called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
-		Set<UUID> filesChanged = database.getJournalDao().getFilesChangedForAccount(accountUID, journalID);
-		return filesChanged != null ? filesChanged : new HashSet<>();
+		List<UUID> filesChanged = database.getJournalDao().getFilesChangedForAccount(accountUID, journalID);
+		Set<UUID> ret = new HashSet<>();
+		if(filesChanged != null)
+			ret.addAll(filesChanged);
+		return ret;
 	}
 
 

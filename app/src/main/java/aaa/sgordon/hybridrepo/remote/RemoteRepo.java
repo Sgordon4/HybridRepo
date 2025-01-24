@@ -47,6 +47,8 @@ public class RemoteRepo {
 	OkHttpClient client;
 	private static final String TAG = "Hyb.Remote";
 
+	private static final UUID deviceUID = UUID.randomUUID();
+
 	public final AccountConnector accountConn;
 	public final FileConnector fileConn;
 	public final ContentConnector contentConn;
@@ -70,7 +72,7 @@ public class RemoteRepo {
 				.build();
 
 		accountConn = new AccountConnector(baseServerUrl, client);
-		fileConn = new FileConnector(baseServerUrl, client);
+		fileConn = new FileConnector(baseServerUrl, client, deviceUID);
 		contentConn = new ContentConnector(baseServerUrl, client);
 		journalConn = new JournalConnector(baseServerUrl, client);
 	}
@@ -175,6 +177,41 @@ public class RemoteRepo {
 	}
 
 
+
+
+
+
+
+	public RFile createFile(@NonNull RFile fileProps) throws ContentsNotFoundException, ConnectException {
+		Log.i(TAG, String.format("REMOTE CREATE FILE PROPS called with fileUID='%s'", fileProps.fileuid));
+		if(isOnMainThread()) throw new NetworkOnMainThreadException();
+
+		try {
+			//Check if the server is missing the file contents. If so, we shouldn't commit the file changes
+			contentConn.getProps(fileProps.checksum);
+
+			//Now that we've confirmed the contents exist, create the file metadata
+			return fileConn.create(fileProps);
+		}
+		catch (ContentsNotFoundException e) {
+			throw new ContentsNotFoundException("Cannot create props, remote is missing file contents!");
+		} catch (ConnectException e) {
+			throw e;
+		} catch (SocketTimeoutException | SocketException e) {
+			throw new ConnectException();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+
+
+
+
+
+
+
+
 	public RFile putFileProps(@NonNull RFile fileProps, @Nullable String prevFileHash, @Nullable String prevAttrHash)
 			throws ContentsNotFoundException, IllegalStateException, ConnectException {
 		Log.i(TAG, String.format("PUT SERVER FILE PROPS called with fileUID='%s'", fileProps.fileuid));
@@ -228,9 +265,7 @@ public class RemoteRepo {
 	public RContent getContentProps(@NonNull String name) throws ContentsNotFoundException, ConnectException {
 		try {
 			return contentConn.getProps(name);
-		} catch (ContentsNotFoundException e) {
-			throw e;
-		} catch (ConnectException e) {
+		} catch (ContentsNotFoundException | ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
 			throw new ConnectException();
@@ -250,9 +285,7 @@ public class RemoteRepo {
 
 			//Now that we know the properties exist, return the content uri
 			return Uri.parse(contentConn.getDownloadUrl(name));
-		} catch (ContentsNotFoundException e) {
-			throw e;
-		} catch (ConnectException e) {
+		} catch (ContentsNotFoundException | ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
 			throw new ConnectException();

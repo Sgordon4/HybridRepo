@@ -15,7 +15,6 @@ import java.util.UUID;
 
 import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.hybrid.ContentsNotFoundException;
-import aaa.sgordon.hybridrepo.hybrid.HybridAPI;
 import aaa.sgordon.hybridrepo.hybrid.types.HFile;
 import aaa.sgordon.hybridrepo.local.LocalRepo;
 import aaa.sgordon.hybridrepo.local.types.LFile;
@@ -49,7 +48,7 @@ public class Sync {
 		lastSyncRemoteID = sharedPrefs.getInt("lastSyncRemote", 0);
 	}
 	public static Sync getInstance() {
-		return Sync.SingletonHelper.INSTANCE;
+		return SingletonHelper.INSTANCE;
 	}
 	private static class SingletonHelper {
 		private static final Sync INSTANCE = new Sync();

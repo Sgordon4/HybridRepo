@@ -1,14 +1,21 @@
 package aaa.sgordon.hybridrepo;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import static org.junit.Assert.*;
+import android.content.Context;
 
-/**
- * Example local unit test, which will execute on the development machine (host).
- *
- * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
- */
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.junit.jupiter.api.Test;
+
+import java.net.ConnectException;
+import java.util.UUID;
+
+import aaa.sgordon.hybridrepo.hybrid.ContentsNotFoundException;
+import aaa.sgordon.hybridrepo.hybrid.HybridAPI;
+import aaa.sgordon.hybridrepo.remote.RemoteRepo;
+import aaa.sgordon.hybridrepo.remote.types.RFile;
+
 public class ExampleUnitTest {
 	@Test
 	public void addition_isCorrect() {

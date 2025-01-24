@@ -2,15 +2,15 @@ package aaa.sgordon.hybridrepo.hybrid.types;
 
 import androidx.annotation.NonNull;
 
-import aaa.sgordon.hybridrepo.local.types.LFile;
-import aaa.sgordon.hybridrepo.remote.types.RFile;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+
+import aaa.sgordon.hybridrepo.local.types.LFile;
+import aaa.sgordon.hybridrepo.remote.types.RFile;
 
 public class HFile {
 	public static final String defaultChecksum = "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";

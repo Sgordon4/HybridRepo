@@ -42,7 +42,7 @@ public class HybridAPI {
 
 
 	public static HybridAPI getInstance() {
-		return HybridAPI.SingletonHelper.INSTANCE;
+		return SingletonHelper.INSTANCE;
 	}
 	private static class SingletonHelper {
 		private static final HybridAPI INSTANCE = new HybridAPI();

@@ -8,12 +8,12 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
 
+import java.util.Arrays;
+
 import aaa.sgordon.hybridrepo.local.types.LAccount;
 import aaa.sgordon.hybridrepo.local.types.LContent;
 import aaa.sgordon.hybridrepo.local.types.LFile;
 import aaa.sgordon.hybridrepo.local.types.LJournal;
-
-import java.util.Arrays;
 
 
 @Database(entities = {LAccount.class, LFile.class, LJournal.class, LContent.class}, version = 1)

@@ -1,10 +1,8 @@
 package aaa.sgordon.hybridrepo.local.types;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
-import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
 import com.google.gson.Gson;
@@ -52,7 +50,6 @@ public class LFile {
 
 
 
-	@Ignore
 	public LFile(@NonNull UUID fileuid, @NonNull UUID accountuid) {
 		this.fileuid = fileuid;
 		this.accountuid = accountuid;

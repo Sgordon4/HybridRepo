@@ -102,7 +102,7 @@ public class SyncWorkers {
 			}
 
 
-			sync.updateLastSyncLocal();
+			//sync.updateLastSyncLocal();
 
 			return Result.success();
 		}

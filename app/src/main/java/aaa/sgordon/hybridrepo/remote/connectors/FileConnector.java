@@ -3,16 +3,17 @@ package aaa.sgordon.hybridrepo.remote.connectors;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import aaa.sgordon.hybridrepo.remote.types.RFile;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Paths;
 import java.util.UUID;
 
+import aaa.sgordon.hybridrepo.remote.types.RFile;
 import okhttp3.FormBody;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
@@ -23,12 +24,14 @@ import okhttp3.Response;
 public class FileConnector {
 	private final String baseServerUrl;
 	private final OkHttpClient client;
+	private final UUID deviceUID;
 	private static final String TAG = "Hyb.Remote.File";
 
 
-	public FileConnector(String baseServerUrl, OkHttpClient client) {
+	public FileConnector(String baseServerUrl, OkHttpClient client, UUID deviceUID) {
 		this.baseServerUrl = baseServerUrl;
 		this.client = client;
+		this.deviceUID = deviceUID;
 	}
 
 
@@ -66,6 +69,74 @@ public class FileConnector {
 	//---------------------------------------------------------------------------------------------
 	// Put
 	//---------------------------------------------------------------------------------------------
+
+
+	//Create a file entry on Remote
+	public RFile create(@NonNull RFile fileProps) throws IOException {
+		String base = Paths.get(baseServerUrl, "files", "create").toString();
+
+		//Compile all passed properties into a form body. Doesn't matter what they are, send them all.
+		JsonObject props = fileProps.toJson();
+		FormBody.Builder builder = new FormBody.Builder();
+		for(String key : props.keySet())
+			builder.add(key, String.valueOf(props.get(key)));
+		builder.add("deviceuid", deviceUID.toString());
+		RequestBody body = builder.build();
+
+		Request request = new Request.Builder().url(base).put(body).build();
+		try (Response response = client.newCall(request).execute()) {
+			if(response.code() == 422)
+				throw new RuntimeException("We're not sending the right stuff.");
+			if(response.code() == 409)
+				throw new FileAlreadyExistsException("File already exists! FileUID='"+fileProps.fileuid+"'");
+			if (!response.isSuccessful())
+				throw new IOException("Unexpected code " + response.code());
+			if(response.body() == null)
+				throw new IOException("Response body is null");
+
+			String responseData = response.body().string();
+			return new Gson().fromJson(responseData, RFile.class);
+		}
+	}
+
+
+
+	//Update file content information on Remote
+	public RFile putContentProps(@NonNull RFile fileProps, @NonNull String prevChecksum) throws IOException {
+		String base = Paths.get(baseServerUrl, "files", "content").toString();
+
+		//Compile all passed properties into a form body. Doesn't matter what they are, send them all.
+		JsonObject props = fileProps.toJson();
+		FormBody.Builder builder = new FormBody.Builder();
+		for(String key : props.keySet())
+			builder.add(key, String.valueOf(props.get(key)));
+		builder.add("deviceuid", deviceUID.toString());
+		RequestBody body = builder.build();
+
+		Request request = new Request.Builder().url(base).put(body)
+				.addHeader("If-Match", prevChecksum)
+				.build();
+		try (Response response = client.newCall(request).execute()) {
+			if(response.code() == 422)
+				throw new RuntimeException("We're not sending the right stuff.");
+			if(response.code() == 404)
+				throw new FileNotFoundException("File not found! FileUID='"+fileProps.fileuid+"'");
+			if(response.code() == 412)
+				throw new IllegalStateException("Checksums don't match! FileUID='"+fileProps.fileuid+"'");
+			if (!response.isSuccessful())
+				throw new IOException("Unexpected code " + response.code());
+			if(response.body() == null)
+				throw new IOException("Response body is null");
+
+			String responseData = response.body().string();
+			return new Gson().fromJson(responseData, RFile.class);
+		}
+	}
+
+
+
+
+
 
 
 	//Create or update a file entry in the database

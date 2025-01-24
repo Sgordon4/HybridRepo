@@ -18,10 +18,10 @@ public abstract class HybridHelpDatabase extends RoomDatabase {
 
 
 	public static HybridHelpDatabase getInstance() {
-		return HybridHelpDatabase.SingletonHelper.INSTANCE;
+		return SingletonHelper.INSTANCE;
 	}
 	private static class SingletonHelper {
-		private static final HybridHelpDatabase INSTANCE = new HybridHelpDatabase.DBBuilder().newInstance( MyApplication.getAppContext() );
+		private static final HybridHelpDatabase INSTANCE = new DBBuilder().newInstance( MyApplication.getAppContext() );
 	}
 	private static class DBBuilder {
 		private static final String DB_NAME = "hybrid.db";

@@ -7,7 +7,6 @@ import androidx.room.Insert;
 import androidx.room.Query;
 
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import aaa.sgordon.hybridrepo.local.types.LJournal;
@@ -16,7 +15,7 @@ import aaa.sgordon.hybridrepo.local.types.LJournal;
 public interface LJournalDAO {
 
 	@Query("SELECT DISTINCT fileuid FROM journal WHERE accountuid = :accountUID AND journalid > :journalID")
-	Set<UUID> getFilesChangedForAccount(UUID accountUID, long journalID);
+	List<UUID> getFilesChangedForAccount(UUID accountUID, long journalID);
 
 	@Query("SELECT * FROM journal WHERE fileuid = :fileUID AND journalid > :journalID")
 	List<LJournal> getChangesForFile(UUID fileUID, long journalID);

@@ -11,7 +11,7 @@ public class Zoning {
 	HZoningDAO dao;
 
 	public static Zoning getInstance() {
-		return Zoning.SingletonHelper.INSTANCE;
+		return SingletonHelper.INSTANCE;
 	}
 	private static class SingletonHelper {
 		private static final Zoning INSTANCE = new Zoning();
