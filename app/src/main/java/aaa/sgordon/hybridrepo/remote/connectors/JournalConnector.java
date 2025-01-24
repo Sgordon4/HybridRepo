@@ -23,7 +23,7 @@ import okhttp3.Response;
 public class JournalConnector {
 	private final String baseServerUrl;
 	private final OkHttpClient client;
-	private static final String TAG = "Hyb.Remote.Journal";
+	private static final String TAG = "Hyb.Rem.Journal";
 
 
 	public JournalConnector(String baseServerUrl, OkHttpClient client) {

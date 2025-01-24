@@ -30,7 +30,7 @@ import okhttp3.Response;
 public class ContentConnector {
 	private final String baseServerUrl;
 	private final OkHttpClient client;
-	private static final String TAG = "Hyb.Remote.Cont";
+	private static final String TAG = "Hyb.Rem.Cont";
 
 
 	public ContentConnector(String baseServerUrl, OkHttpClient client) {

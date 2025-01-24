@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -45,7 +46,7 @@ public class RemoteRepo {
 	private static final String baseServerUrl = "http://10.0.2.2:3306";
 	//private static final String baseServerUrl = "http://localhost:3306";
 	OkHttpClient client;
-	private static final String TAG = "Hyb.Remote";
+	private static final String TAG = "Hyb.Rem";
 
 	private static final UUID deviceUID = UUID.randomUUID();
 
@@ -182,7 +183,7 @@ public class RemoteRepo {
 
 
 
-	public RFile createFile(@NonNull RFile fileProps) throws ContentsNotFoundException, ConnectException {
+	public RFile createFile(@NonNull RFile fileProps) throws ContentsNotFoundException, FileAlreadyExistsException, ConnectException {
 		Log.i(TAG, String.format("REMOTE CREATE FILE PROPS called with fileUID='%s'", fileProps.fileuid));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
@@ -195,7 +196,67 @@ public class RemoteRepo {
 		}
 		catch (ContentsNotFoundException e) {
 			throw new ContentsNotFoundException("Cannot create props, remote is missing file contents!");
-		} catch (ConnectException e) {
+		} catch (FileAlreadyExistsException | ConnectException e) {
+			throw e;
+		} catch (SocketTimeoutException | SocketException e) {
+			throw new ConnectException();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+
+	public RFile putContentProps(@NonNull RFile fileProps, @NonNull String prevChecksum)
+			throws ContentsNotFoundException, FileNotFoundException, IllegalStateException, ConnectException {
+		Log.i(TAG, String.format("REMOTE PUT FILE CONTENT PROPS called with fileUID='%s'", fileProps.fileuid));
+		if(isOnMainThread()) throw new NetworkOnMainThreadException();
+
+		try {
+			//Check if the server is missing the file contents. If so, we shouldn't commit the file changes
+			contentConn.getProps(fileProps.checksum);
+
+			//Now that we've confirmed the contents exist, update the file metadata
+			return fileConn.putContentProps(fileProps, prevChecksum);
+		}
+		catch (ContentsNotFoundException e) {
+			throw new ContentsNotFoundException("Cannot update content props, remote is missing file contents!");
+		} catch (FileNotFoundException | ConnectException e) {
+			throw e;
+		} catch (SocketTimeoutException | SocketException e) {
+			throw new ConnectException();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+
+	public RFile putAttributeProps(@NonNull RFile fileProps, @NonNull String prevAttrHash)
+			throws FileNotFoundException, IllegalStateException, ConnectException {
+		Log.i(TAG, String.format("REMOTE PUT FILE ATTRIBUTE PROPS called with fileUID='%s'", fileProps.fileuid));
+		if(isOnMainThread()) throw new NetworkOnMainThreadException();
+
+		try {
+			return fileConn.putAttributeProps(fileProps, prevAttrHash);
+		}
+		catch (FileNotFoundException | ConnectException e) {
+			throw e;
+		} catch (SocketTimeoutException | SocketException e) {
+			throw new ConnectException();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+
+	//TODO This currently just overwrites all timestamps. We want it to take maxes and, like, actually be useful.
+	public RFile putTimestamps(@NonNull RFile fileProps) throws FileNotFoundException, ConnectException {
+		Log.i(TAG, String.format("REMOTE PUT FILE TIMESTAMP PROPS called with fileUID='%s'", fileProps.fileuid));
+		if(isOnMainThread()) throw new NetworkOnMainThreadException();
+
+		try {
+			return fileConn.putTimestamps(fileProps);
+		}
+		catch (FileNotFoundException | ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
 			throw new ConnectException();

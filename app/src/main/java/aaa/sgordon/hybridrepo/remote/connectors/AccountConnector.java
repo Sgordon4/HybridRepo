@@ -21,7 +21,7 @@ import okhttp3.Response;
 public class AccountConnector {
 	private final String baseServerUrl;
 	private final OkHttpClient client;
-	private static final String TAG = "Hyb.Remote.Account";
+	private static final String TAG = "Hyb.Rem.Account";
 
 	//For reference
 	private static final String[] accountProps = {
