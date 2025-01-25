@@ -96,7 +96,7 @@ public class Sync {
 		try {
 
 			localRepo.lock(fileUID);
-			List<LJournal> localChanges = localRepo.getChangesForFileAfter(fileUID, remoteSyncID);
+			List<LJournal> localChanges = localRepo.getAllChangesFor(fileUID, remoteSyncID);
 			LFile localProps = localRepo.getFileProps(fileUID);
 
 			//If neither repo has changes, we're done

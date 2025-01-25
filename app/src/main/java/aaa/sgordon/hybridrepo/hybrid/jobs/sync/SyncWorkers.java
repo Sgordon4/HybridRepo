@@ -20,6 +20,7 @@ import androidx.work.WorkerParameters;
 import java.io.FileNotFoundException;
 import java.net.ConnectException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -28,7 +29,9 @@ import java.util.concurrent.TimeUnit;
 
 import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.local.LocalRepo;
+import aaa.sgordon.hybridrepo.local.types.LJournal;
 import aaa.sgordon.hybridrepo.remote.RemoteRepo;
+import aaa.sgordon.hybridrepo.remote.types.RJournal;
 
 public class SyncWorkers {
 
@@ -86,14 +89,30 @@ public class SyncWorkers {
 			RemoteRepo remoteRepo = RemoteRepo.getInstance();
 
 
-			/*
+
 			//Get all the files with changes since the journalIDs specified
-			Set<UUID> filesChanged = localRepo.getFilesChangedForAccountAfter(accountUID, lastSyncLocal);
+			List<LJournal> localFilesChanged = localRepo.getLatestChangeFor(accountUID, lastSyncLocal);
+			List<RJournal> remoteFilesChanged;
 			try {
-				filesChanged.addAll( remoteRepo.getLatestChangesOnly(accountUID, lastSyncRemote) );
+				remoteFilesChanged = remoteRepo.getLatestChangeFor(accountUID, lastSyncRemote);
 			} catch (ConnectException e) {
 				Log.w(TAG, "Journal Watcher requeueing due to connection issues!");
 				return Result.retry();
+			}
+
+
+			//And grab the data we need from them
+			Set<UUID> filesChanged = new HashSet<>();
+			int newSyncLocal = lastSyncLocal;
+			int newSyncRemote = lastSyncRemote;
+
+			for(LJournal lJournal : localFilesChanged) {
+				filesChanged.add(lJournal.fileuid);
+				newSyncLocal = Math.max(newSyncLocal, lJournal.journalid);
+			}
+			for(RJournal rJournal : remoteFilesChanged) {
+				filesChanged.add(rJournal.fileuid);
+				newSyncRemote = Math.max(newSyncRemote, rJournal.journalid);
 			}
 
 
@@ -102,9 +121,9 @@ public class SyncWorkers {
 				SyncWorker.enqueue(fileUID, lastSyncLocal, lastSyncRemote);
 			}
 
-
-			sync.updateLastSyncLocal();
-			 */
+			//And update our journalID trackers
+			sync.updateLastSyncLocal(newSyncLocal);
+			sync.updateLastSyncRemote(newSyncRemote);
 
 			return Result.success();
 		}

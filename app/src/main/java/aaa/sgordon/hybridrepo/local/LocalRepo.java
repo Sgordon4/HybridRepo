@@ -247,24 +247,23 @@ public class LocalRepo {
 	//---------------------------------------------------------------------------------------------
 
 	@NonNull
-	public Set<UUID> getFilesChangedForAccountAfter(@NonNull UUID accountUID, int journalID) {
-		Log.i(TAG, String.format("LOCAL JOURNAL GET FILEUIDS CHANGED FOR ACCOUNT called with journalID='%s', accountUID='%s'", journalID, accountUID));
+	public List<LJournal> getLatestChangeFor(@NonNull UUID accountUID, int journalID, UUID... fileUIDs) {
+		Log.v(TAG, String.format("REMOTE JOURNAL GET LATEST called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
-		List<UUID> filesChanged = database.getJournalDao().getFilesChangedForAccount(accountUID, journalID);
-		Set<UUID> ret = new HashSet<>();
-		if(filesChanged != null)
-			ret.addAll(filesChanged);
-		return ret;
+		if(fileUIDs.length == 0)
+			return database.getJournalDao().getLatestChangeFor(accountUID, journalID);
+		return database.getJournalDao().getLatestChangeFor(accountUID, journalID, fileUIDs);
 	}
 
 
 	@NonNull
-	public List<LJournal> getChangesForFileAfter(@NonNull UUID fileUID, int journalID) {
-		Log.i(TAG, String.format("LOCAL JOURNAL GET JOURNALS FOR FILE called with journalID='%s', fileUID='%s'", journalID, fileUID));
+	public List<LJournal> getAllChangesFor(@NonNull UUID accountUID, int journalID, UUID... fileUIDs) {
+		Log.v(TAG, String.format("REMOTE JOURNAL GET ALL called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
-		List<LJournal> journals = database.getJournalDao().getChangesForFile(fileUID, journalID);
-		return journals != null ? journals : new ArrayList<>();
+		if(fileUIDs.length == 0)
+			return database.getJournalDao().getAllChangesFor(accountUID, journalID);
+		return database.getJournalDao().getAllChangesFor(accountUID, journalID, fileUIDs);
 	}
 }

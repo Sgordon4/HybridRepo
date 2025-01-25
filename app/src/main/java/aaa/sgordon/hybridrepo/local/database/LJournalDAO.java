@@ -14,14 +14,18 @@ import aaa.sgordon.hybridrepo.local.types.LJournal;
 @Dao
 public interface LJournalDAO {
 
-	@Query("SELECT DISTINCT fileuid FROM journal WHERE accountuid = :accountUID AND journalid > :journalID")
-	List<UUID> getFilesChangedForAccount(UUID accountUID, long journalID);
+	@Query("SELECT * FROM journal WHERE accountuid = :accountUID AND journalid > :journalID")
+	List<LJournal> getAllChangesFor(UUID accountUID, int journalID);
+	@Query("SELECT * FROM journal WHERE accountuid = :accountUID AND journalid > :journalID AND fileuid IN (:fileUIDs)")
+	List<LJournal> getAllChangesFor(UUID accountUID, int journalID, UUID... fileUIDs);
 
-	@Query("SELECT * FROM journal WHERE fileuid = :fileUID AND journalid > :journalID")
-	List<LJournal> getChangesForFile(UUID fileUID, long journalID);
 
-	@Query("SELECT * FROM journal WHERE journalid > :journalID")
-	LiveData<List<LJournal>> longpollAfterID(long journalID);
+	@Query("SELECT * FROM journal WHERE accountuid = :accountUID AND journalid > :journalID AND fileuid IN (:fileUIDs) "+
+			"GROUP BY fileuid ORDER BY MAX(journalid)")
+	List<LJournal> getLatestChangeFor(UUID accountUID, int journalID, UUID... fileUIDs);
+	@Query("SELECT * FROM journal WHERE accountuid = :accountUID AND journalid > :journalID "+
+			"GROUP BY fileuid ORDER BY MAX(journalid)")
+	List<LJournal> getLatestChangeFor(UUID accountUID, int journalID);
 
 
 	@Insert
