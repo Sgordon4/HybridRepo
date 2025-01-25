@@ -54,7 +54,7 @@ public class HybridAPI {
 
 
 	public void startListeningForChanges(@NonNull UUID accountUID) {
-		SyncWorkers.JournalWatcher.enqueue(accountUID);
+		SyncWorkers.SyncWatcher.enqueue(accountUID);
 	}
 
 

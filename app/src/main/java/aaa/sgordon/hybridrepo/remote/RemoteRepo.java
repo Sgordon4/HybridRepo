@@ -442,7 +442,7 @@ public class RemoteRepo {
 		if (isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
-			Set<UUID> filesChanged = journalConn.getFilesChangedForAccount(accountUID, journalID);
+			Set<UUID> filesChanged = journalConn.getOnlyLatestChanges(accountUID, journalID);
 			return filesChanged != null ? filesChanged : new HashSet<>();
 		} catch (ConnectException e) {
 			throw e;
@@ -460,7 +460,7 @@ public class RemoteRepo {
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
-			List<RJournal> journals = journalConn.getChangesForFile(fileUID, journalID);
+			List<RJournal> journals = journalConn.getAllChanges(fileUID, journalID);
 			return journals != null ? journals : new ArrayList<>();
 		} catch (ConnectException e) {
 			throw e;

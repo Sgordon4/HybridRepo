@@ -33,10 +33,10 @@ import aaa.sgordon.hybridrepo.remote.RemoteRepo;
 public class SyncWorkers {
 
 
-	public static class JournalWatcher extends Worker {
+	public static class SyncWatcher extends Worker {
 		private static final String TAG = "Hyb.Sync.Watcher";
 
-		public JournalWatcher(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+		public SyncWatcher(@NonNull Context context, @NonNull WorkerParameters workerParams) {
 			super(context, workerParams);
 		}
 
@@ -51,19 +51,19 @@ public class SyncWorkers {
 							.setRequiredNetworkType(NetworkType.UNMETERED)
 							.setRequiresStorageNotLow(true)
 							.build())
-					.addTag(accountUID.toString()).addTag("JWATCH")
+					.addTag(accountUID.toString()).addTag("swatch")
 					.setInputData(data.build()).build();
 
 
 			//Enqueue the sync job, keeping any currently running job operational
 			WorkManager workManager = WorkManager.getInstance(MyApplication.getAppContext());
-			workManager.enqueueUniquePeriodicWork("jwatch_"+accountUID, ExistingPeriodicWorkPolicy.KEEP, worker);
+			workManager.enqueueUniquePeriodicWork("swatch_"+accountUID, ExistingPeriodicWorkPolicy.KEEP, worker);
 		}
 
 
 		public static void dequeue(@NonNull UUID fileuid) {
 			WorkManager workManager = WorkManager.getInstance(MyApplication.getAppContext());
-			workManager.cancelUniqueWork("jwatch_"+fileuid);
+			workManager.cancelUniqueWork("swatch_"+fileuid);
 		}
 
 
