@@ -34,7 +34,7 @@ import aaa.sgordon.hybridrepo.remote.RemoteRepo;
 import aaa.sgordon.hybridrepo.remote.types.RFile;
 
 
-public class ExampleInstrumentedTest {
+public class RemoteFilePropsTest {
 	private static final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
 	private static final Path emptyFile = Paths.get(context.getDataDir().toString(), "temp", "empty.txt");

@@ -77,7 +77,6 @@ public class FileConnector {
 	//Create a file entry on Remote
 	public RFile create(@NonNull RFile fileProps) throws IOException {
 		String base = Paths.get(baseServerUrl, "files", "create").toString();
-		System.out.println(fileProps);
 
 		//Compile all passed properties into a form body. Doesn't matter what they are, send them all.
 		JsonObject props = fileProps.toJson();

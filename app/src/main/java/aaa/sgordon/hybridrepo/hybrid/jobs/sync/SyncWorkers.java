@@ -86,10 +86,11 @@ public class SyncWorkers {
 			RemoteRepo remoteRepo = RemoteRepo.getInstance();
 
 
+			/*
 			//Get all the files with changes since the journalIDs specified
 			Set<UUID> filesChanged = localRepo.getFilesChangedForAccountAfter(accountUID, lastSyncLocal);
 			try {
-				filesChanged.addAll( remoteRepo.getFilesChangedForAccountAfter(accountUID, lastSyncRemote) );
+				filesChanged.addAll( remoteRepo.getLatestChangesOnly(accountUID, lastSyncRemote) );
 			} catch (ConnectException e) {
 				Log.w(TAG, "Journal Watcher requeueing due to connection issues!");
 				return Result.retry();
@@ -102,7 +103,8 @@ public class SyncWorkers {
 			}
 
 
-			//sync.updateLastSyncLocal();
+			sync.updateLastSyncLocal();
+			 */
 
 			return Result.success();
 		}

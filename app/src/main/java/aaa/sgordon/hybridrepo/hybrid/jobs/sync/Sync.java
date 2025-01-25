@@ -90,7 +90,7 @@ public class Sync {
 
 
 	public void sync(@NonNull UUID fileUID, int localSyncID, int remoteSyncID) throws FileNotFoundException, IllegalStateException, ConnectException {
-		List<RJournal> remoteChanges = remoteRepo.getChangesForFileAfter(fileUID, localSyncID);
+		List<RJournal> remoteChanges = remoteRepo.getAllChangesFor(fileUID, localSyncID);
 		RFile remoteProps = remoteRepo.getFileProps(fileUID);
 
 		try {

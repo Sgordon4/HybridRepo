@@ -22,9 +22,7 @@ import java.net.SocketTimeoutException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -75,7 +73,7 @@ public class RemoteRepo {
 		accountConn = new AccountConnector(baseServerUrl, client);
 		fileConn = new FileConnector(baseServerUrl, client, deviceUID);
 		contentConn = new ContentConnector(baseServerUrl, client);
-		journalConn = new JournalConnector(baseServerUrl, client);
+		journalConn = new JournalConnector(baseServerUrl, client, deviceUID);
 	}
 
 	private boolean isOnMainThread() {
@@ -324,6 +322,7 @@ public class RemoteRepo {
 
 
 	public RContent getContentProps(@NonNull String name) throws ContentsNotFoundException, ConnectException {
+		Log.v(TAG, String.format("\nREMOTE GET CONTENT PROPS called with name='%s'", name));
 		try {
 			return contentConn.getProps(name);
 		} catch (ContentsNotFoundException | ConnectException e) {
@@ -337,7 +336,7 @@ public class RemoteRepo {
 
 
 	public Uri getContentDownloadUri(@NonNull String name) throws ContentsNotFoundException, ConnectException {
-		Log.v(TAG, String.format("\nGET SERVER CONTENT URI called with name='"+name+"'"));
+		Log.v(TAG, String.format("\nREMOTE GET CONTENT URI called with name='"+name+"'"));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
@@ -437,13 +436,12 @@ public class RemoteRepo {
 	//---------------------------------------------------------------------------------------------
 
 	@NonNull
-	public Set<UUID> getFilesChangedForAccountAfter(@NonNull UUID accountUID, int journalID) throws ConnectException {
-		Log.i(TAG, String.format("REMOTE JOURNAL GET FILEUIDS CHANGED FOR ACCOUNT called with journalID='%s', accountUID='%s'", journalID, accountUID));
+	public List<RJournal> getLatestChangeFor(@NonNull UUID accountUID, int journalID, UUID... fileUIDs) throws ConnectException {
+		Log.v(TAG, String.format("REMOTE JOURNAL GET LATEST called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if (isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
-			Set<UUID> filesChanged = journalConn.getOnlyLatestChanges(accountUID, journalID);
-			return filesChanged != null ? filesChanged : new HashSet<>();
+			return journalConn.getLatestChangesOnly(journalID, accountUID, fileUIDs);
 		} catch (ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
@@ -455,13 +453,12 @@ public class RemoteRepo {
 
 
 	@NonNull
-	public List<RJournal> getChangesForFileAfter(@NonNull UUID fileUID, int journalID) throws ConnectException {
-		Log.i(TAG, String.format("LOCAL JOURNAL GET JOURNALS FOR FILE called with journalID='%s', fileUID='%s'", journalID, fileUID));
+	public List<RJournal> getAllChangesFor(@NonNull UUID accountUID, int journalID, UUID... fileUIDs) throws ConnectException {
+		Log.v(TAG, String.format("REMOTE JOURNAL GET ALL called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
-			List<RJournal> journals = journalConn.getAllChanges(fileUID, journalID);
-			return journals != null ? journals : new ArrayList<>();
+			return journalConn.getAllChanges(journalID, accountUID, fileUIDs);
 		} catch (ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {

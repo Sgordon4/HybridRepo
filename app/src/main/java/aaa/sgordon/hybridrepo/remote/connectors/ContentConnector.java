@@ -45,7 +45,6 @@ public class ContentConnector {
 	//---------------------------------------------------------------------------------------------
 
 	public RContent getProps(@NonNull String name) throws IOException {
-		Log.i(TAG, String.format("\nGET CONTENT PROPS called with name='%s'", name));
 		String url = Paths.get(baseServerUrl, "content", name).toString();
 
 		Request request = new Request.Builder().url(url).build();

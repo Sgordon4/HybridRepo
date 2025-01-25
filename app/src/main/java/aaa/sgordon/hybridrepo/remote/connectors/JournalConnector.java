@@ -10,9 +10,7 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -37,18 +35,19 @@ public class JournalConnector {
 	}
 
 
-	//TODO Include device ID
-	@Nullable
+
+	@NonNull
 	public List<RJournal> getAllChanges(long journalID, @NonNull UUID accountUID, UUID... fileUIDs) throws IOException {
 		String url = Paths.get(baseServerUrl, "journal", ""+journalID).toString();
 
 		FormBody.Builder builder = new FormBody.Builder();
 		builder.add("accountuid", accountUID.toString());
-		builder.add("fileuids", Arrays.toString(fileUIDs));
 		builder.add("deviceuid", deviceUID.toString());
+		for(UUID fileUID : fileUIDs)
+			builder.add("fileuid", fileUID.toString());
 		RequestBody body = builder.build();
 
-		Request request = new Request.Builder().url(url).put(body).build();
+		Request request = new Request.Builder().url(url).post(body).build();
 		try (Response response = client.newCall(request).execute()) {
 			if(response.body() == null)
 				throw new IOException("Response body is null");
@@ -66,25 +65,32 @@ public class JournalConnector {
 	}
 
 
-	//TODO Include device ID
-	@Nullable
-	public List<RJournal> getOnlyLatestChanges(long journalID, @NonNull UUID accountUID, UUID... fileUIDs) throws IOException {
-		String url = Paths.get(baseServerUrl, "journal", "fileuids", ""+journalID).toString();
+
+	@NonNull
+	public List<RJournal> getLatestChangesOnly(long journalID, @NonNull UUID accountUID, UUID... fileUIDs) throws IOException {
+		String url = Paths.get(baseServerUrl, "journal", "latest", ""+journalID).toString();
 
 		FormBody.Builder builder = new FormBody.Builder();
-		builder.add("accountUID", accountUID.toString());
-		//builder.add("fileUID", fileUID.toString());
+		builder.add("accountuid", accountUID.toString());
+		builder.add("deviceuid", deviceUID.toString());
+		for(UUID fileUID : fileUIDs)
+			builder.add("fileuid", fileUID.toString());
 		RequestBody body = builder.build();
 
-		Request request = new Request.Builder().url(url).put(body).build();
+		Request request = new Request.Builder().url(url).post(body).build();
 		try (Response response = client.newCall(request).execute()) {
-			if (!response.isSuccessful())
-				throw new IOException("Unexpected code " + response.code());
 			if(response.body() == null)
 				throw new IOException("Response body is null");
+			if(response.code() == 422) {
+				Gson gson = new GsonBuilder().setPrettyPrinting().create();
+				String prettyJson = gson.toJson(JsonParser.parseString(response.body().string()));
+				throw new RuntimeException("We're not sending the right stuff. \n"+prettyJson);
+			}
+			if (!response.isSuccessful())
+				throw new IOException("Unexpected code " + response.code());
 
 			String responseData = response.body().string();
-			return new Gson().fromJson(responseData, new TypeToken< Set<RJournal> >(){}.getType());
+			return new Gson().fromJson(responseData, new TypeToken< List<RJournal> >(){}.getType());
 		}
 	}
 
