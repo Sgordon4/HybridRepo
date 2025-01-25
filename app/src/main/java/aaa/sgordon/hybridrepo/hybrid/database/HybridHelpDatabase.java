@@ -6,12 +6,14 @@ import android.util.Log;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.TypeConverters;
 
 import java.util.Arrays;
 
 import aaa.sgordon.hybridrepo.MyApplication;
 
 @Database(entities = {HZone.class}, version = 1)
+@TypeConverters({HybridDBConverters.class})
 public abstract class HybridHelpDatabase extends RoomDatabase {
 
 	public abstract HZoningDAO getZoningDao();
