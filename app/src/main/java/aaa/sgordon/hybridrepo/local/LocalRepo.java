@@ -166,6 +166,10 @@ public class LocalRepo {
 		ensureLockHeld(fileUID);
 
 		database.getFileDao().delete(fileUID);
+
+		//And add a journal entry
+		LJournal journal = new LJournal(oldFile, fileProps);
+		database.getJournalDao().insert(journal);
 	}
 
 

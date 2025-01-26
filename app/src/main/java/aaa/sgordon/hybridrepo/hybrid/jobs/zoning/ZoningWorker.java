@@ -41,10 +41,21 @@ public class ZoningWorker extends Worker {
 
 
 	//Enqueue a worker to change a file's zones
-	public static void enqueue(@NonNull UUID fileUID, boolean shouldBeLocal, boolean shouldBeRemote) throws FileNotFoundException {
+	public static void enqueue(@NonNull UUID fileUID, boolean shouldBeLocal, boolean shouldBeRemote) throws IllegalArgumentException, IllegalStateException {
+		if(!shouldBeLocal && !shouldBeRemote)
+			throw new IllegalArgumentException("Cannot set both zones to false! FileUID='"+fileUID+"'");
+
 		HZoningDAO dao = HybridHelpDatabase.getInstance().getZoningDao();
 		HZone currentZones = dao.get(fileUID);
-		if(currentZones == null) throw new FileNotFoundException("Zoning data not found for fileUID='"+fileUID+"'");
+		if(currentZones == null) throw new IllegalStateException("Zoning data not found for fileUID='"+fileUID+"'");
+
+		if(!currentZones.isLocal && !currentZones.isRemote) {
+			//TODO Attempt a repair. Maybe also do that in cleanup.
+			Log.wtf(TAG, "Zoning machine broke. FileUID='"+fileUID+"'");
+			throw new IllegalStateException("Zoning machine broke. FileUID='"+fileUID+"'");
+		}
+
+		//Don't do any other zoning compatibility changes here, do them in doWork for the most up-do-date data
 
 
 		Constraints.Builder constraints = new Constraints.Builder();
@@ -114,38 +125,51 @@ public class ZoningWorker extends Worker {
 		if((currentZones.isLocal == shouldBeLocal) && (currentZones.isRemote == shouldBeRemote))
 			return Result.success();
 
+		if(!currentZones.isLocal && !currentZones.isRemote) {
+			//TODO Attempt a repair. Maybe also do that in cleanup.
+			Log.wtf(TAG, "Zoning machine broke. FileUID='"+fileUID+"'");
+			return Result.failure();
+		}
+
+
 		HZone updatedZones = new HZone(fileUID, currentZones.isLocal, currentZones.isRemote);
 
 
 		//--------------------------------------------------
 
 
-		//If we're trying to download data to Local (and the file exists on Remote)...
-		if(!currentZones.isLocal && shouldBeLocal && !currentZones.isRemote)
-			Log.d(TAG, "Zoning Worker trying to download data to Local, but zones say file shouldn't exist on remote! FileUID='"+fileUID+"'");
-		if(!currentZones.isLocal && shouldBeLocal && currentZones.isRemote) {
+		//If we're trying to download data to Local...
+		if(!currentZones.isLocal && shouldBeLocal) {
 			Log.d(TAG, "Zoning Worker trying to download data to Local! FileUID='"+fileUID+"'");
 
-			Result downloadResult = downloadToLocal(fileUID);
-			if(!downloadResult.equals(Result.success()))
-				return downloadResult;
+			if(!currentZones.isRemote)
+				Log.d(TAG, "Zones say file shouldn't exist on remote! Skipping download! FileUID='"+fileUID+"'");
 
-			updatedZones.isLocal = true;
-			dao.put(updatedZones);
+			else {
+				Result downloadResult = downloadToLocal(fileUID);
+				if(!downloadResult.equals(Result.success()))
+					return downloadResult;
+
+				updatedZones.isLocal = true;
+				dao.put(updatedZones);
+			}
 		}
 
 		//If we're trying to upload data to Remote (and the file exists on Local)...
-		if(!currentZones.isRemote && shouldBeRemote && !currentZones.isLocal)
-			Log.d(TAG, "Zoning Worker trying to upload data to remote, but zones say file shouldn't exist on local! FileUID='"+fileUID+"'");
-		if(!currentZones.isRemote && shouldBeRemote && currentZones.isLocal) {
+		if(!currentZones.isRemote && shouldBeRemote) {
 			Log.d(TAG, "Zoning Worker trying to upload data to Remote! FileUID='"+fileUID+"'");
 
-			Result uploadResult = uploadToRemote(fileUID);
-			if(!uploadResult.equals(Result.success()))
-				return uploadResult;
+			if(!currentZones.isLocal)
+				Log.d(TAG, "Zones say file shouldn't exist on local! Skipping upload! FileUID='"+fileUID+"'");
 
-			updatedZones.isRemote = true;
-			dao.put(updatedZones);
+			else {
+				Result uploadResult = uploadToRemote(fileUID);
+				if(!uploadResult.equals(Result.success()))
+					return uploadResult;
+
+				updatedZones.isRemote = true;
+				dao.put(updatedZones);
+			}
 		}
 
 
@@ -245,7 +269,7 @@ public class ZoningWorker extends Worker {
 		try {
 			//We only want to upload the data if the file does not already exist on Remote. Check just in case the zones are out of date.
 			if(remoteRepo.doesFileExist(fileUID))
-				throw new FileAlreadyExistsException("Remote file already exists! FileUID='"+fileUID+"'");
+				throw new FileAlreadyExistsException("Remote file already exists!");
 
 			LFile localProps = localRepo.getFileProps(fileUID);
 			Uri localContent = localRepo.getContentUri(localProps.checksum);

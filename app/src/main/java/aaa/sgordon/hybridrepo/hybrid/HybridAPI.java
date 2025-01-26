@@ -24,6 +24,8 @@ import java.util.UUID;
 
 import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.Utilities;
+import aaa.sgordon.hybridrepo.hybrid.database.HZone;
+import aaa.sgordon.hybridrepo.hybrid.database.HybridHelpDatabase;
 import aaa.sgordon.hybridrepo.hybrid.jobs.sync.SyncWorkers;
 import aaa.sgordon.hybridrepo.hybrid.types.HFile;
 import aaa.sgordon.hybridrepo.local.LocalRepo;
@@ -95,6 +97,7 @@ public class HybridAPI {
 	}
 
 
+	//TODO Sync should not use this
 	public HFile createFile(@NonNull UUID accountUID, boolean isDir, boolean isLink) {
 		UUID fileUID = UUID.randomUUID();
 		LFile newFile = new LFile(fileUID, accountUID);
@@ -105,13 +108,23 @@ public class HybridAPI {
 		//Create blank file contents
 		localRepo.writeContents(HFile.defaultChecksum, "".getBytes());
 
+		//Put the properties themselves
 		newFile = localRepo.putFileProps(newFile, "", "");
+
+		//Set zoning information.
+		HZone newZoningInfo = new HZone(fileUID, true, false);
+		HybridHelpDatabase.getInstance().getZoningDao().put(newZoningInfo);
+
 		return HFile.fromLocalFile(newFile);
 	}
 
 
 	public void deleteFile(@NonNull UUID fileUID) {
 		localRepo.deleteFileProps(fileUID);
+		HybridHelpDatabase.getInstance().getZoningDao().delete(fileUID);
+		//All we need to do is delete the file properties and zoning information here in local.
+		//Cleanup will remove this file's contents if they're not being used by another file.
+		//If a remote file exists, Sync will now handle the delete from Remote when it finds the local journal entry for delete.
 	}
 
 

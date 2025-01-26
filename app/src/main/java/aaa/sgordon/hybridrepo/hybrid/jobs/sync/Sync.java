@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -90,12 +91,48 @@ public class Sync {
 
 
 	public void sync(@NonNull UUID fileUID, int localSyncID, int remoteSyncID) throws FileNotFoundException, IllegalStateException, ConnectException {
+		RFile remoteProps = remoteRepo.getFileProps(fileUID);
+		@Nullable RJournal remoteLatestChange = remoteRepo.getLatestChangeFor(remoteProps.accountuid, 0).get(0);
+
+
+		//If remote latest is delete, delete from local and remove zoning
+		//If local latest is delete, delete from remote
+
+		//If RLatest is something and LLatest is null, add to local
+		//
+
+
+
+
+
+
+
+
+
+
+
 		List<RJournal> remoteChanges = remoteRepo.getAllChangesFor(fileUID, localSyncID);
 		RFile remoteProps = remoteRepo.getFileProps(fileUID);
 
-		try {
 
+
+		//If remote doesn't exist, do nothing. Remote is created through zoning.
+		//If remote file exists but local does not, copy props to local, add zoning, notify, and leave.
+		//If both exist:
+		// > If first local is create but remote already exists, we just copied from remote. Ignore the create. (or just ignore if both exist? don't need journals)
+		// > If latest local is delete, delete from remote
+		// > If latest Remote is delete, delete from local and remove zoning
+
+
+		//If remote exists, local does not, local has changes
+
+
+
+
+
+		try {
 			localRepo.lock(fileUID);
+
 			List<LJournal> localChanges = localRepo.getAllChangesFor(fileUID, remoteSyncID);
 			LFile localProps = localRepo.getFileProps(fileUID);
 
