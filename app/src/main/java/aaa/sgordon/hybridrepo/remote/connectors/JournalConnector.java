@@ -37,12 +37,16 @@ public class JournalConnector {
 
 
 	@NonNull
-	public List<RJournal> getAllChanges(long journalID, @NonNull UUID accountUID, UUID... fileUIDs) throws IOException {
+	public List<RJournal> getAllChanges(long journalID, @Nullable UUID accountUID, @Nullable UUID[] fileUIDs) throws IOException {
 		String url = Paths.get(baseServerUrl, "journal", ""+journalID).toString();
 
+		if(fileUIDs == null) fileUIDs = new UUID[0];
+		if(accountUID == null && fileUIDs.length == 0)
+			throw new IllegalArgumentException("AccountUID and/or 1+ FileUIDs are required!");
+
 		FormBody.Builder builder = new FormBody.Builder();
-		builder.add("accountuid", accountUID.toString());
 		builder.add("deviceuid", deviceUID.toString());
+		if(accountUID != null) builder.add("accountuid", accountUID.toString());
 		for(UUID fileUID : fileUIDs)
 			builder.add("fileuid", fileUID.toString());
 		RequestBody body = builder.build();
@@ -67,12 +71,16 @@ public class JournalConnector {
 
 
 	@NonNull
-	public List<RJournal> getLatestChangesOnly(long journalID, @NonNull UUID accountUID, UUID... fileUIDs) throws IOException {
+	public List<RJournal> getLatestChangesOnly(long journalID, @Nullable UUID accountUID, @Nullable UUID[] fileUIDs) throws IOException {
 		String url = Paths.get(baseServerUrl, "journal", "latest", ""+journalID).toString();
 
+		if(fileUIDs == null) fileUIDs = new UUID[0];
+		if(accountUID == null && fileUIDs.length == 0)
+			throw new IllegalArgumentException("AccountUID and/or 1+ FileUIDs are required!");
+
 		FormBody.Builder builder = new FormBody.Builder();
-		builder.add("accountuid", accountUID.toString());
 		builder.add("deviceuid", deviceUID.toString());
+		if(accountUID != null) builder.add("accountuid", accountUID.toString());
 		for(UUID fileUID : fileUIDs)
 			builder.add("fileuid", fileUID.toString());
 		RequestBody body = builder.build();

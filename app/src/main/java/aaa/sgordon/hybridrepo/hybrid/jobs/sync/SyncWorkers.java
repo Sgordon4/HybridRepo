@@ -91,10 +91,10 @@ public class SyncWorkers {
 
 
 			//Get all the files with changes since the journalIDs specified
-			List<LJournal> localFilesChanged = localRepo.getLatestChangeFor(accountUID, lastSyncLocal);
+			List<LJournal> localFilesChanged = localRepo.getLatestChangesFor(lastSyncLocal, accountUID, null);
 			List<RJournal> remoteFilesChanged;
 			try {
-				remoteFilesChanged = remoteRepo.getLatestChangeFor(accountUID, lastSyncRemote);
+				remoteFilesChanged = remoteRepo.getLatestChangesFor(lastSyncRemote, accountUID, null);
 			} catch (ConnectException e) {
 				Log.w(TAG, "Journal Watcher requeueing due to connection issues!");
 				return Result.retry();

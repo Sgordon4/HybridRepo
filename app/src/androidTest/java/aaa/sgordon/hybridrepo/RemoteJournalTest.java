@@ -8,11 +8,9 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-import org.junit.Ignore;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedInputStream;
@@ -92,17 +90,17 @@ public class RemoteJournalTest {
 
 	@Test
 	public void testJournalCreation() throws FileAlreadyExistsException, ContentsNotFoundException, FileNotFoundException, ConnectException {
-		List<RJournal> journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		List<RJournal> journals = rRepo.getAllChangesFor(0, accountUID,  new UUID[]{fileUID});
 		assert journals.isEmpty();
 
 		//Test journals are created for creating a file
 		props = rRepo.createFile(props);
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		journals = rRepo.getAllChangesFor(0, accountUID, new UUID[]{fileUID});
 		assert journals.size() == 1;
 
 		//Test journals are NOT created for re-creating a file
 		Assertions.assertThrows(FileAlreadyExistsException.class, () -> rRepo.createFile(props));
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		journals = rRepo.getAllChangesFor(0, accountUID, new UUID[]{fileUID});
 		assert journals.size() == 1;
 
 
@@ -111,14 +109,14 @@ public class RemoteJournalTest {
 		props.checksum = smallChecksum;
 		props.filesize = (int) smallFile.toFile().length();
 		rRepo.putContentProps(props, emptyChecksum);
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		journals = rRepo.getAllChangesFor(0, accountUID, new UUID[]{fileUID});
 		assert journals.size() == 2;
 
 		//Test journals are created for setting checksum information more than once
 		props.checksum = emptyChecksum;
 		props.filesize = (int) emptyFile.toFile().length();
 		rRepo.putContentProps(props, smallChecksum);
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		journals = rRepo.getAllChangesFor(0, accountUID,  new UUID[]{fileUID});
 		assert journals.size() == 3;
 
 
@@ -126,13 +124,13 @@ public class RemoteJournalTest {
 		//Test journals are created for setting attribute information
 		props.userattr = new Gson().fromJson("{\"testkey\":\"testvalue\"}", JsonObject.class);;
 		RFile changedAttr = rRepo.putAttributeProps(props, props.attrhash);
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		journals = rRepo.getAllChangesFor(0, accountUID,  new UUID[]{fileUID});
 		assert journals.size() == 4;
 
 		//Test journals are created for setting attribute information more than once
 		props.userattr = new Gson().fromJson("{}", JsonObject.class);;
 		rRepo.putAttributeProps(props, changedAttr.attrhash);
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		journals = rRepo.getAllChangesFor(0, accountUID,  new UUID[]{fileUID});
 		assert journals.size() == 5;
 
 
@@ -141,13 +139,13 @@ public class RemoteJournalTest {
 		props.accesstime = Instant.now().getEpochSecond();
 		props.modifytime = Instant.now().getEpochSecond();
 		rRepo.putTimestamps(props);
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		journals = rRepo.getAllChangesFor(0, accountUID,  new UUID[]{fileUID});
 		assert journals.size() == 6;
 
 		//Test journals are created for setting attribute information more than once
 		props.accesstime = Instant.now().getEpochSecond();
 		rRepo.putTimestamps(props);
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		journals = rRepo.getAllChangesFor(0, accountUID,  new UUID[]{fileUID});
 		assert journals.size() == 7;
 	}
 
@@ -170,7 +168,7 @@ public class RemoteJournalTest {
 
 
 		//Grab the latest journal for this fileUID
-		List<RJournal> journals = rRepo.getLatestChangeFor(accountUID, 0, fileUID);
+		List<RJournal> journals = rRepo.getLatestChangesFor(0, accountUID,  new UUID[]{fileUID});
 		assert journals.size() == 1;
 
 		//Make sure it has info about the attribute change
@@ -194,7 +192,7 @@ public class RemoteJournalTest {
 
 
 		//Grab the latest journals for the two fileUIDs
-		journals = rRepo.getLatestChangeFor(accountUID, 0, fileUID, second.fileuid);
+		journals = rRepo.getLatestChangesFor(0, accountUID, new UUID[]{fileUID, second.fileuid});
 		assert journals.size() == 2;
 
 		//Make sure both have info about the attribute change
@@ -204,10 +202,10 @@ public class RemoteJournalTest {
 
 
 		//Make sure grabbing journals for fileUIDs that don't exist doesn't give extra data
-		journals = rRepo.getLatestChangeFor(accountUID, 0, fileUID, second.fileuid, UUID.randomUUID());
+		journals = rRepo.getLatestChangesFor(0, accountUID,  new UUID[]{fileUID, second.fileuid, UUID.randomUUID()});
 		assert journals.size() == 2;
 
-		journals = rRepo.getLatestChangeFor(accountUID, 0, UUID.randomUUID());
+		journals = rRepo.getLatestChangesFor(0, accountUID,  new UUID[]{UUID.randomUUID()});
 		assert journals.isEmpty();
 	}
 
@@ -230,7 +228,7 @@ public class RemoteJournalTest {
 
 
 		//Grab all journals for this fileUID
-		List<RJournal> journals = rRepo.getAllChangesFor(accountUID, 0, fileUID);
+		List<RJournal> journals = rRepo.getAllChangesFor(0, accountUID,  new UUID[]{fileUID});
 		assert journals.size() == 3;
 
 		//Make sure each journal references the correct change
@@ -256,7 +254,7 @@ public class RemoteJournalTest {
 
 
 		//Grab the latest journals for the two fileUIDs
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID, second.fileuid);
+		journals = rRepo.getAllChangesFor(0, accountUID, new UUID[]{fileUID, second.fileuid});
 		assert journals.size() == 6;
 
 		//Make sure both have info about the attribute change
@@ -271,10 +269,10 @@ public class RemoteJournalTest {
 
 
 		//Make sure grabbing journals for fileUIDs that don't exist doesn't give extra data
-		journals = rRepo.getAllChangesFor(accountUID, 0, fileUID, second.fileuid, UUID.randomUUID());
+		journals = rRepo.getAllChangesFor(0, accountUID, new UUID[]{fileUID, second.fileuid, UUID.randomUUID()});
 		assert journals.size() == 6;
 
-		journals = rRepo.getAllChangesFor(accountUID, 0, UUID.randomUUID());
+		journals = rRepo.getAllChangesFor(0, accountUID, new UUID[]{UUID.randomUUID()});
 		assert journals.isEmpty();
 	}
 

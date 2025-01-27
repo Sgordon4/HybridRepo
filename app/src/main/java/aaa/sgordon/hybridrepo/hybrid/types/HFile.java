@@ -111,23 +111,26 @@ public class HFile {
 		return hFile;
 	}
 
-	public static HFile fromServerFile(@NonNull RFile server) {
-		HFile hFile = new HFile(server.fileuid, server.accountuid);
-		hFile.isdir = server.isdir;
-		hFile.islink = server.islink;
-		hFile.filesize = server.filesize;
-		hFile.checksum = server.checksum;
-		hFile.userattr = server.userattr;
-		hFile.attrhash = server.attrhash;
-		hFile.changetime = server.changetime;
-		hFile.modifytime = server.modifytime;
-		hFile.accesstime = server.accesstime;
-		hFile.createtime = server.createtime;
+	public static HFile fromRemoteFile(@NonNull RFile remote) {
+		HFile hFile = new HFile(remote.fileuid, remote.accountuid);
+		hFile.isdir = remote.isdir;
+		hFile.islink = remote.islink;
+		hFile.filesize = remote.filesize;
+		hFile.checksum = remote.checksum;
+		hFile.userattr = remote.userattr;
+		hFile.attrhash = remote.attrhash;
+		hFile.changetime = remote.changetime;
+		hFile.modifytime = remote.modifytime;
+		hFile.accesstime = remote.accesstime;
+		hFile.createtime = remote.createtime;
 
 		return hFile;
 	}
 
 
+	public static LFile toLocalFile(@NonNull RFile remote) {
+		return fromRemoteFile(remote).toLocalFile();
+	}
 	public LFile toLocalFile() {
 		LFile local = new LFile(fileuid, accountuid);
 		local.isdir = isdir;
@@ -144,19 +147,22 @@ public class HFile {
 		return local;
 	}
 
-	public RFile toServerFile() {
-		RFile server = new RFile(fileuid, accountuid);
-		server.isdir = isdir;
-		server.islink = islink;
-		server.filesize = filesize;
-		server.checksum = checksum;
-		server.userattr = userattr;
-		server.attrhash = attrhash;
-		server.changetime = changetime;
-		server.modifytime = modifytime;
-		server.accesstime = accesstime;
-		server.createtime = createtime;
+	public static RFile toRemoteFile(@NonNull LFile local) {
+		return fromLocalFile(local).toRemoteFile();
+	}
+	public RFile toRemoteFile() {
+		RFile remote = new RFile(fileuid, accountuid);
+		remote.isdir = isdir;
+		remote.islink = islink;
+		remote.filesize = filesize;
+		remote.checksum = checksum;
+		remote.userattr = userattr;
+		remote.attrhash = attrhash;
+		remote.changetime = changetime;
+		remote.modifytime = modifytime;
+		remote.accesstime = accesstime;
+		remote.createtime = createtime;
 
-		return server;
+		return remote;
 	}
 }

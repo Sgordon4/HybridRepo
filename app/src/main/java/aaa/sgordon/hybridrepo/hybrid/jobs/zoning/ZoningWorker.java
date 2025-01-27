@@ -234,7 +234,7 @@ public class ZoningWorker extends Worker {
 					//We can't guarantee the Local checksum we need exists in Remote however, so we'll need to do an ad-hoc sync.
 					//Throw the retrieved props straight into Local. This is acceptable since we know there's no data to-be-written from Local.
 					localRepo.writeContents(localProps.checksum, remoteContent);
-					localRepo.putFileProps(HFile.fromServerFile(remoteProps).toLocalFile(), localProps.checksum, localProps.attrhash);
+					localRepo.putFileProps(HFile.fromRemoteFile(remoteProps).toLocalFile(), localProps.checksum, localProps.attrhash);
 				}
 				return Result.success();
 			}
@@ -275,7 +275,7 @@ public class ZoningWorker extends Worker {
 			Uri localContent = localRepo.getContentUri(localProps.checksum);
 
 			remoteRepo.uploadData(localProps.checksum, new File(localContent.getPath()));
-			remoteRepo.putFileProps(HFile.fromLocalFile(localProps).toServerFile(), "", "");
+			remoteRepo.createFile(HFile.toRemoteFile(localProps));
 
 			return Result.success();
 		}

@@ -230,63 +230,6 @@ public class FileConnector {
 			return new Gson().fromJson(responseData, RFile.class);
 		}
 	}
-
-
-
-
-
-
-
-
-
-
-
-
-	//Create or update a file entry in the database
-	public RFile upsert(@NonNull RFile file, @Nullable String prevFileHash, @Nullable String prevAttrHash)
-			throws IllegalStateException, IOException {
-		//Log.i(TAG, "\nUPSERT FILE called");
-		String base = Paths.get(baseServerUrl, "files").toString();
-
-		//Empty user attributes "{}" are hashed to "BF21A9E8FBC5A3846FB05B4FA0859E0917B2202F". This is swapped in for convenience.
-		if(prevAttrHash == null) prevAttrHash = "BF21A9E8FBC5A3846FB05B4FA0859E0917B2202F";
-
-		//Alongside the usual url, send fileHash and attrHash as query params if applicable
-		HttpUrl.Builder httpBuilder = HttpUrl.parse(base).newBuilder();
-		if(prevFileHash != null) httpBuilder.addQueryParameter("prevfilehash", prevFileHash);
-		httpBuilder.addQueryParameter("prevattrhash", prevAttrHash);
-		URL url = httpBuilder.build().url();
-
-
-		//Note: No need to check that file properties contain fileuid & accountuid, both are NonNull in obj def
-		JsonObject props = file.toJson();
-
-		//Compile all passed properties into a form body. Doesn't matter what they are, send them all.
-		FormBody.Builder builder = new FormBody.Builder();
-		for(String key : props.keySet()) {
-			//Postgres (& SQL standard) requires single quotes around strings. What an absolute pain in the ass.
-			if (key.equals("userattr"))
-				builder.add(key, "'" + props.get(key) + "'");
-			else
-				builder.add(key, String.valueOf(props.get(key)).replace("\"", "'"));
-		}
-		RequestBody body = builder.build();
-
-
-
-		Request request = new Request.Builder().url(url).put(body).build();
-		try (Response response = client.newCall(request).execute()) {
-			if(response.code() == 412)
-				throw new IllegalStateException("PrevHashes do not match with latest properties!");
-			if (!response.isSuccessful())
-				throw new IOException("Unexpected code " + response.code());
-			if(response.body() == null)
-				throw new IOException("Response body is null");
-
-			String responseData = response.body().string();
-			return new Gson().fromJson(responseData, RFile.class);
-		}
-	}
 	
 
 	//---------------------------------------------------------------------------------------------

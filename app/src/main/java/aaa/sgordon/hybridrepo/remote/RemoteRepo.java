@@ -47,6 +47,7 @@ public class RemoteRepo {
 	private static final String TAG = "Hyb.Rem";
 
 	private static final UUID deviceUID = UUID.randomUUID();
+	private UUID currentAccount;
 
 	public final AccountConnector accountConn;
 	public final FileConnector fileConn;
@@ -78,6 +79,13 @@ public class RemoteRepo {
 
 	private boolean isOnMainThread() {
 		return Thread.currentThread().equals(Looper.getMainLooper().getThread());
+	}
+
+	public UUID getCurrentAccount() {
+		return currentAccount;
+	}
+	public void setAccount(@NonNull UUID accountUID) {
+		this.currentAccount = accountUID;
 	}
 
 
@@ -172,36 +180,6 @@ public class RemoteRepo {
 			return true;
 		} catch (FileNotFoundException e) {
 			return false;
-		}
-	}
-
-
-
-	public RFile putFileProps(@NonNull RFile fileProps, @Nullable String prevFileHash, @Nullable String prevAttrHash)
-			throws ContentsNotFoundException, IllegalStateException, ConnectException {
-		Log.i(TAG, String.format("PUT SERVER FILE PROPS called with fileUID='%s'", fileProps.fileuid));
-		if(isOnMainThread()) throw new NetworkOnMainThreadException();
-
-
-		//Check if the server is missing the file contents. If so, we can't commit the file changes
-		try {
-			contentConn.getProps(fileProps.checksum);
-		} catch (ContentsNotFoundException e) {
-			throw new ContentsNotFoundException("Cannot put props, system is missing file contents!");
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-
-
-		//Now that we've confirmed the contents exist, create/update the file metadata
-		try {
-			return fileConn.upsert(fileProps, prevFileHash, prevAttrHash);
-		} catch (IllegalStateException | ConnectException e) {
-			throw e;
-		} catch (SocketTimeoutException | SocketException e) {
-			throw new ConnectException();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
 		}
 	}
 
@@ -427,7 +405,7 @@ public class RemoteRepo {
 	//---------------------------------------------------------------------------------------------
 
 	@NonNull
-	public List<RJournal> getLatestChangeFor(@NonNull UUID accountUID, int journalID, UUID... fileUIDs) throws ConnectException {
+	public List<RJournal> getLatestChangesFor(int journalID, @Nullable UUID accountUID, @Nullable UUID[] fileUIDs) throws ConnectException {
 		Log.v(TAG, String.format("REMOTE JOURNAL GET LATEST called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if (isOnMainThread()) throw new NetworkOnMainThreadException();
 
@@ -444,7 +422,7 @@ public class RemoteRepo {
 
 
 	@NonNull
-	public List<RJournal> getAllChangesFor(@NonNull UUID accountUID, int journalID, UUID... fileUIDs) throws ConnectException {
+	public List<RJournal> getAllChangesFor(int journalID, @Nullable UUID accountUID, @Nullable UUID[] fileUIDs) throws ConnectException {
 		Log.v(TAG, String.format("REMOTE JOURNAL GET ALL called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 

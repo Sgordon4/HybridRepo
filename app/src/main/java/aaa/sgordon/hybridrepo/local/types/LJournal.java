@@ -29,16 +29,21 @@ public class LJournal {
 	@ColumnInfo(defaultValue = "CURRENT_TIMESTAMP")
 	public Long changetime;
 
+	@ColumnInfo(defaultValue = "false")
+	public boolean fromSync;
+
 
 	public LJournal(@NonNull UUID fileuid, @NonNull UUID accountuid, @NonNull JsonObject changes) {
 		this.fileuid = fileuid;
 		this.accountuid = accountuid;
 		this.changes = changes;
+		this.fromSync = false;
 	}
 	public LJournal(@Nullable LFile oldProps, @NonNull LFile newProps) {
 		this.fileuid = newProps.fileuid;
 		this.accountuid = newProps.accountuid;
 		this.changetime = newProps.changetime;
+		this.fromSync = false;
 
 		this.changes = computeChanges(oldProps, newProps);
 	}
@@ -58,7 +63,7 @@ public class LJournal {
 		if(oldProps != null && !Objects.equals(oldProps.accesstime, newProps.accesstime))
 			changes.addProperty("accesstime", newProps.accesstime);
 		if(oldProps == null || !Objects.equals(oldProps.createtime, newProps.createtime))
-			changes.addProperty("accesstime", newProps.createtime);
+			changes.addProperty("createtime", newProps.createtime);
 
 		return changes;
 	}

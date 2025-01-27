@@ -6,18 +6,16 @@ import android.os.NetworkOnMainThreadException;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -33,6 +31,7 @@ import aaa.sgordon.hybridrepo.local.types.LJournal;
 public class LocalRepo {
 	private static final String TAG = "Hyb.Local";
 	public final LocalDatabase database;
+	private UUID currentAccount;
 
 	private final Map<UUID, ReentrantLock> locks;
 
@@ -50,6 +49,13 @@ public class LocalRepo {
 
 	private boolean isOnMainThread() {
 		return Thread.currentThread().equals(Looper.getMainLooper().getThread());
+	}
+
+	public UUID getCurrentAccount() {
+		return currentAccount;
+	}
+	public void setAccount(@NonNull UUID accountUID) {
+		this.currentAccount = accountUID;
 	}
 
 
@@ -122,6 +128,7 @@ public class LocalRepo {
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 		ensureLockHeld(fileProps.fileuid);
 
+		//TODO Check zoning (here or in HAPI)
 		/*	//We may not have the contents on local if the file is server-only
 		//Check if the repo is missing the file contents. If so, we can't commit the file changes
 		try {
@@ -153,23 +160,24 @@ public class LocalRepo {
 		//Create/update the file
 		database.getFileDao().put(fileProps);
 
-		//And add a journal entry
-		LJournal journal = new LJournal(oldFile, fileProps);
-		database.getJournalDao().insert(journal);
 		return fileProps;
 	}
 
 
-	public void deleteFileProps(@NonNull UUID fileUID) {
+	//This is supposed to throw FileNotFound. We do NOT want another journal entry added
+	// if the file doesn't exist, as that might mess up the next sync. Also it gives more info.
+	public void deleteFileProps(@NonNull UUID fileUID) throws FileNotFoundException {
 		Log.i(TAG, String.format("LOCAL DELETE FILE PROPS called with fileUID='%s'", fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 		ensureLockHeld(fileUID);
 
-		database.getFileDao().delete(fileUID);
+		//Ensure the file exists in the first place
+		LFile existingFile = database.getFileDao().get(fileUID);
+		if(existingFile == null)
+			throw new FileNotFoundException("File not found! ID: '"+fileUID+"'");
 
-		//And add a journal entry
-		LJournal journal = new LJournal(oldFile, fileProps);
-		database.getJournalDao().insert(journal);
+		//Remove the file
+		database.getFileDao().delete(fileUID);
 	}
 
 
@@ -250,10 +258,18 @@ public class LocalRepo {
 	// Journal
 	//---------------------------------------------------------------------------------------------
 
+	public void putJournalEntry(@NonNull LJournal journal) {
+		database.getJournalDao().insert(journal);
+	}
+
 	@NonNull
-	public List<LJournal> getLatestChangeFor(@NonNull UUID accountUID, int journalID, UUID... fileUIDs) {
+	public List<LJournal> getLatestChangesFor(int journalID, @Nullable UUID accountUID, @Nullable UUID[] fileUIDs) {
 		Log.v(TAG, String.format("REMOTE JOURNAL GET LATEST called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
+
+		if(fileUIDs == null) fileUIDs = new UUID[0];
+		if(accountUID == null && fileUIDs.length == 0)
+			throw new IllegalArgumentException("AccountUID and/or 1+ FileUIDs are required!");
 
 		if(fileUIDs.length == 0)
 			return database.getJournalDao().getLatestChangeFor(accountUID, journalID);
@@ -262,9 +278,13 @@ public class LocalRepo {
 
 
 	@NonNull
-	public List<LJournal> getAllChangesFor(@NonNull UUID accountUID, int journalID, UUID... fileUIDs) {
+	public List<LJournal> getAllChangesFor(int journalID, @Nullable UUID accountUID, @Nullable UUID[] fileUIDs) {
 		Log.v(TAG, String.format("REMOTE JOURNAL GET ALL called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
+
+		if(fileUIDs == null) fileUIDs = new UUID[0];
+		if(accountUID == null && fileUIDs.length == 0)
+			throw new IllegalArgumentException("AccountUID and/or 1+ FileUIDs are required!");
 
 		if(fileUIDs.length == 0)
 			return database.getJournalDao().getAllChangesFor(accountUID, journalID);
