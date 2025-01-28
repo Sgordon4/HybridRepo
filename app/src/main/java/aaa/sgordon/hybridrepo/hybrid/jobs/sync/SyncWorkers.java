@@ -214,10 +214,6 @@ public class SyncWorkers {
 				Log.w(TAG, "SyncWorker requeueing due to connection issues!");
 				return Result.retry();
 			}
-			catch (FileNotFoundException e) {
-				Log.w(TAG, "SyncWorker found a repo is missing the file, so there is nothing to sync. FileUID='"+fileUID+"'");
-				return Result.success();
-			}
 
 			return Result.success();
 		}
