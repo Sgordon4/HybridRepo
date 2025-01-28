@@ -3,6 +3,7 @@ package aaa.sgordon.hybridrepo.local.database;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
@@ -10,6 +11,7 @@ import androidx.room.TypeConverters;
 
 import java.util.Arrays;
 
+import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.local.types.LAccount;
 import aaa.sgordon.hybridrepo.local.types.LContent;
 import aaa.sgordon.hybridrepo.local.types.LFile;
@@ -31,8 +33,7 @@ public abstract class LocalDatabase extends RoomDatabase {
 	public static class DBBuilder {
 		private static final String DB_NAME = "hlocal.db";
 
-		public LocalDatabase newInstance(Context context) {
-
+		public LocalDatabase newInstance(@NonNull Context context) {
 			Builder<LocalDatabase> dbBuilder = Room.databaseBuilder(context, LocalDatabase.class, DB_NAME);
 
 			//SQL Logging:

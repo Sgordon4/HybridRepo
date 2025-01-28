@@ -1,4 +1,4 @@
-package aaa.sgordon.hybridrepo.hybrid.jobs.zoning;
+package aaa.sgordon.hybridrepo.hybrid.jobs.sync;
 
 import android.content.Context;
 import android.net.Uri;
@@ -25,7 +25,6 @@ import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.hybrid.ContentsNotFoundException;
 import aaa.sgordon.hybridrepo.hybrid.database.HZone;
 import aaa.sgordon.hybridrepo.hybrid.database.HZoningDAO;
-import aaa.sgordon.hybridrepo.hybrid.database.HybridHelpDatabase;
 import aaa.sgordon.hybridrepo.hybrid.types.HFile;
 import aaa.sgordon.hybridrepo.local.LocalRepo;
 import aaa.sgordon.hybridrepo.local.types.LFile;
@@ -41,11 +40,11 @@ public class ZoningWorker extends Worker {
 
 
 	//Enqueue a worker to change a file's zones
-	public static void enqueue(@NonNull UUID fileUID, boolean shouldBeLocal, boolean shouldBeRemote) throws IllegalArgumentException, IllegalStateException {
+	public static OneTimeWorkRequest enqueue(@NonNull UUID fileUID, boolean shouldBeLocal, boolean shouldBeRemote) throws IllegalArgumentException, IllegalStateException {
 		if(!shouldBeLocal && !shouldBeRemote)
 			throw new IllegalArgumentException("Cannot set both zones to false! FileUID='"+fileUID+"'");
 
-		HZoningDAO dao = HybridHelpDatabase.getInstance().getZoningDao();
+		HZoningDAO dao = Sync.getInstance().zoningDAO;
 		HZone currentZones = dao.get(fileUID);
 		if(currentZones == null) throw new IllegalStateException("Zoning data not found for fileUID='"+fileUID+"'");
 
@@ -85,6 +84,8 @@ public class ZoningWorker extends Worker {
 
 		WorkManager workManager = WorkManager.getInstance(MyApplication.getAppContext());
 		workManager.enqueueUniqueWork("zoning_"+fileUID, ExistingWorkPolicy.REPLACE, worker);
+
+		return worker;
 	}
 
 	public static void dequeue(@NonNull UUID fileuid) {
@@ -104,14 +105,14 @@ public class ZoningWorker extends Worker {
 
 		String localString = getInputData().getString("LOCAL");
 		assert localString != null;
-		boolean shouldBeLocal = Boolean.getBoolean(localString);
+		boolean shouldBeLocal = Boolean.parseBoolean(localString);
 
 		String remoteString = getInputData().getString("REMOTE");
 		assert remoteString != null;
-		boolean shouldBeRemote = Boolean.getBoolean(remoteString);
+		boolean shouldBeRemote = Boolean.parseBoolean(remoteString);
 
 
-		HZoningDAO dao = HybridHelpDatabase.getInstance().getZoningDao();
+		HZoningDAO dao =  Sync.getInstance().zoningDAO;
 		HZone currentZones = dao.get(fileUID);
 		if(currentZones == null) {
 			Log.e(TAG, "Zoning data not found for fileUID='"+fileUID+"'");

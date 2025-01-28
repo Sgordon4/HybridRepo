@@ -1,6 +1,5 @@
 package aaa.sgordon.hybridrepo.local;
 
-import android.content.Context;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
@@ -16,7 +15,6 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.Utilities;
 import aaa.sgordon.hybridrepo.local.types.LContent;
 
@@ -25,17 +23,19 @@ import aaa.sgordon.hybridrepo.local.types.LContent;
 public class LContentHelper {
 	private static final String TAG = "Hyb.Local.Cont";
 	private static final String contentDir = "content";
+	private final String storageDir;
+
+	public LContentHelper(@NonNull String storageDir) {
+		//Contents are stored in the app's data directory
+		this.storageDir = storageDir;
+	}
 
 
 	//WARNING: This method does not create the file or parent directory, it only provides the location
 	@NonNull
-	private static File getContentLocationOnDisk(@NonNull String hash) {
-		//Starting out of the app's data directory...
-		Context context = MyApplication.getAppContext();
-		String appDataDir = context.getApplicationInfo().dataDir;
-
+	private File getContentLocationOnDisk(@NonNull String hash) {
 		//Content is stored in a content subdirectory
-		File contentRoot = new File(appDataDir, contentDir);
+		File contentRoot = new File(storageDir, contentDir);
 
 		//With each content file named by its SHA256 hash
 		return new File(contentRoot, hash);
@@ -47,13 +47,13 @@ public class LContentHelper {
 
 	//WARNING: The file at the end of this uri may not exist
 	@NonNull
-	public static Uri getContentUri(@NonNull String name) {
+	public Uri getContentUri(@NonNull String name) {
 		File contents = getContentLocationOnDisk(name);
 		return Uri.fromFile(contents);
 	}
 
 
-	public static LContent writeContents(@NonNull String name, @NonNull byte[] contents) throws IOException {
+	public LContent writeContents(@NonNull String name, @NonNull byte[] contents) throws IOException {
 		File destinationFile = getContentLocationOnDisk(name);
 
 		if(!destinationFile.exists()) {
@@ -74,7 +74,7 @@ public class LContentHelper {
 	}
 
 
-	public static LContent writeContents(@NonNull String name, @NonNull Uri source) throws IOException {
+	public LContent writeContents(@NonNull String name, @NonNull Uri source) throws IOException {
 		File destinationFile = getContentLocationOnDisk(name);
 
 		if(!destinationFile.exists()) {
@@ -103,7 +103,7 @@ public class LContentHelper {
 	}
 
 
-	public static void deleteContents(@NonNull String name) {
+	public void deleteContents(@NonNull String name) {
 		File contentFile = getContentLocationOnDisk(name);
 		boolean del = contentFile.delete();
 	}

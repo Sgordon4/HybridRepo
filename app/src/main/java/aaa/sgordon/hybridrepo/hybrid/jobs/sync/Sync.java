@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.ConnectException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,6 +23,7 @@ import aaa.sgordon.hybridrepo.hybrid.database.HZoningDAO;
 import aaa.sgordon.hybridrepo.hybrid.database.HybridHelpDatabase;
 import aaa.sgordon.hybridrepo.hybrid.types.HFile;
 import aaa.sgordon.hybridrepo.local.LocalRepo;
+import aaa.sgordon.hybridrepo.local.database.LocalDatabase;
 import aaa.sgordon.hybridrepo.local.types.LFile;
 import aaa.sgordon.hybridrepo.local.types.LJournal;
 import aaa.sgordon.hybridrepo.remote.RemoteRepo;
@@ -38,24 +40,31 @@ public class Sync {
 
 	private final LocalRepo localRepo;
 	private final RemoteRepo remoteRepo;
-	private final HZoningDAO zoningDAO;
 
 
-	private Sync() {
+	private static Sync instance;
+	public final HZoningDAO zoningDAO;
+	public static Sync getInstance() {
+		if (instance == null)
+			throw new IllegalStateException("LocalRepo is not initialized. Call initialize() first.");
+		return instance;
+	}
+
+	public static synchronized void initialize(Context context) {
+		HybridHelpDatabase hdb = new HybridHelpDatabase.DBBuilder().newInstance(context);
+		if (instance == null) instance = new Sync(hdb, context);
+	}
+	public static synchronized void initialize(HybridHelpDatabase database, Context context) {
+		if (instance == null) instance = new Sync(database, context);
+	}
+	private Sync(HybridHelpDatabase database, Context context) {
 		localRepo = LocalRepo.getInstance();
 		remoteRepo = RemoteRepo.getInstance();
-		zoningDAO = HybridHelpDatabase.getInstance().getZoningDao();
+		zoningDAO = database.getZoningDao();
 
-
-		sharedPrefs = MyApplication.getAppContext().getSharedPreferences("gallery.syncPointers", Context.MODE_PRIVATE);
+		sharedPrefs = context.getSharedPreferences("gallery.syncPointers", Context.MODE_PRIVATE);
 		lastSyncLocalID = sharedPrefs.getInt("lastSyncLocal", 0);
 		lastSyncRemoteID = sharedPrefs.getInt("lastSyncRemote", 0);
-	}
-	public static Sync getInstance() {
-		return SingletonHelper.INSTANCE;
-	}
-	private static class SingletonHelper {
-		private static final Sync INSTANCE = new Sync();
 	}
 
 

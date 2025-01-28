@@ -1,6 +1,5 @@
 package aaa.sgordon.hybridrepo.hybrid;
 
-import android.content.Context;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
@@ -25,7 +24,9 @@ import java.util.UUID;
 import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.Utilities;
 import aaa.sgordon.hybridrepo.hybrid.database.HZone;
+import aaa.sgordon.hybridrepo.hybrid.database.HZoningDAO;
 import aaa.sgordon.hybridrepo.hybrid.database.HybridHelpDatabase;
+import aaa.sgordon.hybridrepo.hybrid.jobs.sync.Sync;
 import aaa.sgordon.hybridrepo.hybrid.jobs.sync.SyncWorkers;
 import aaa.sgordon.hybridrepo.hybrid.types.HFile;
 import aaa.sgordon.hybridrepo.local.LocalRepo;
@@ -52,6 +53,8 @@ public class HybridAPI {
 	private final LocalRepo localRepo;
 	private final RemoteRepo remoteRepo;
 
+	private final Sync sync;
+
 	private UUID currentAccount = UUID.fromString("b16fe0ba-df94-4bb6-ad03-aab7e47ca8c3");
 
 
@@ -71,6 +74,9 @@ public class HybridAPI {
 		//Stand-in for the login system
 		localRepo.setAccount(currentAccount);
 		remoteRepo.setAccount(currentAccount);
+
+		Sync.initialize(MyApplication.getAppContext());
+		sync = Sync.getInstance();
 	}
 
 
@@ -142,7 +148,7 @@ public class HybridAPI {
 
 		//Set zoning information.
 		HZone newZoningInfo = new HZone(fileUID, true, false);
-		HybridHelpDatabase.getInstance().getZoningDao().put(newZoningInfo);
+		Sync.getInstance().zoningDAO.put(newZoningInfo);
 
 		return HFile.fromLocalFile(newFile);
 	}
@@ -158,7 +164,7 @@ public class HybridAPI {
 		localRepo.putJournalEntry(journal);
 
 		//Remove zoning information
-		HybridHelpDatabase.getInstance().getZoningDao().delete(fileUID);
+		Sync.getInstance().zoningDAO.delete(fileUID);
 		//All we need to do is delete the file properties and zoning information here in local.
 		//Cleanup will remove this file's contents if they're not being used by another file.
 		//If a remote file exists, Sync will now handle the delete from Remote using the new journal entry.
@@ -287,8 +293,7 @@ public class HybridAPI {
 		UUID fileUID = UUID.randomUUID();
 
 		//Write the source to a temp file so we can get the checksum
-		Context context = MyApplication.getAppContext();
-		File appCacheDir = context.getCacheDir();
+		File appCacheDir = MyApplication.getAppContext().getCacheDir();
 		File tempFile = Files.createTempFile(appCacheDir.toPath(), fileUID.toString(), null).toFile();
 
 		String checksum;

@@ -1,5 +1,6 @@
 package aaa.sgordon.hybridrepo.local;
 
+import android.content.Context;
 import android.net.Uri;
 import android.os.Looper;
 import android.os.NetworkOnMainThreadException;
@@ -10,6 +11,7 @@ import androidx.annotation.Nullable;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
@@ -22,6 +24,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import aaa.sgordon.hybridrepo.MyApplication;
 import aaa.sgordon.hybridrepo.Utilities;
 import aaa.sgordon.hybridrepo.hybrid.ContentsNotFoundException;
+import aaa.sgordon.hybridrepo.hybrid.database.HybridHelpDatabase;
+import aaa.sgordon.hybridrepo.hybrid.jobs.sync.Sync;
 import aaa.sgordon.hybridrepo.local.database.LocalDatabase;
 import aaa.sgordon.hybridrepo.local.types.LAccount;
 import aaa.sgordon.hybridrepo.local.types.LContent;
@@ -30,22 +34,35 @@ import aaa.sgordon.hybridrepo.local.types.LJournal;
 
 public class LocalRepo {
 	private static final String TAG = "Hyb.Local";
-	public final LocalDatabase database;
-	private UUID currentAccount;
 
+	private static LocalRepo instance;
+	private final LocalDatabase database;
+	private LContentHelper contentHelper;
+
+	private UUID currentAccount;
 	private final Map<UUID, ReentrantLock> locks;
 
-
 	public static LocalRepo getInstance() {
-		return SingletonHelper.INSTANCE;
+		if (instance == null)
+			throw new IllegalStateException("LocalRepo is not initialized. Call initialize() first.");
+		return instance;
 	}
-	private static class SingletonHelper {
-		private static final LocalRepo INSTANCE = new LocalRepo();
+
+	public static synchronized void initialize(Context context) {
+		LocalDatabase db = new LocalDatabase.DBBuilder().newInstance(context);
+		if (instance == null) instance = new LocalRepo(db, context.getApplicationInfo().dataDir);
 	}
-	private LocalRepo() {
+	public static synchronized void initialize(LocalDatabase database, String storageDir) {
+		if (instance == null) instance = new LocalRepo(database, storageDir);
+	}
+	private LocalRepo(LocalDatabase database, String storageDir) {
 		locks = new HashMap<>();
-		database = new LocalDatabase.DBBuilder().newInstance( MyApplication.getAppContext() );
+		this.database = database;
+		this.contentHelper = new LContentHelper(storageDir);
 	}
+
+
+
 
 	private boolean isOnMainThread() {
 		return Thread.currentThread().equals(Looper.getMainLooper().getThread());
@@ -203,7 +220,7 @@ public class LocalRepo {
 		getContentProps(name);
 
 		//Now that we know the properties exist, return the content uri
-		return LContentHelper.getContentUri(name);
+		return contentHelper.getContentUri(name);
 	}
 
 
@@ -217,7 +234,7 @@ public class LocalRepo {
 		} catch (ContentsNotFoundException e) {
 			//If the content doesn't already exist, write it
 			try {
-				return LContentHelper.writeContents(name, contents);
+				return contentHelper.writeContents(name, contents);
 			} catch (IOException ex) {
 				throw new RuntimeException(ex);
 			}
@@ -234,7 +251,7 @@ public class LocalRepo {
 		} catch (ContentsNotFoundException e) {
 			//If the content doesn't already exist, write it
 			try {
-				return LContentHelper.writeContents(name, source);
+				return contentHelper.writeContents(name, source);
 			} catch (IOException ex) {
 				throw new RuntimeException(ex);
 			}
@@ -250,7 +267,7 @@ public class LocalRepo {
 		database.getContentDao().delete(name);
 
 		//Now remove the content itself from disk
-		LContentHelper.deleteContents(name);
+		contentHelper.deleteContents(name);
 	}
 
 

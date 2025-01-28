@@ -41,12 +41,11 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class RemoteRepo {
+	private static final String TAG = "Hyb.Rem";
 	private static final String baseServerUrl = "http://10.0.2.2:3306";
 	//private static final String baseServerUrl = "http://localhost:3306";
-	OkHttpClient client;
-	private static final String TAG = "Hyb.Rem";
 
-	private static final UUID deviceUID = UUID.randomUUID();
+	private UUID deviceUID = UUID.randomUUID();
 	private UUID currentAccount;
 
 	public final AccountConnector accountConn;
@@ -62,7 +61,7 @@ public class RemoteRepo {
 		private static final RemoteRepo INSTANCE = new RemoteRepo();
 	}
 	private RemoteRepo() {
-		client = new OkHttpClient().newBuilder()
+		OkHttpClient client = new OkHttpClient().newBuilder()
 				.addInterceptor(new LogInterceptor())
 				.followRedirects(true)
 				.connectTimeout(2, TimeUnit.SECONDS)
@@ -274,7 +273,7 @@ public class RemoteRepo {
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
-			fileConn.delete(fileUID);
+			fileConn.delete(fileUID, currentAccount);
 		} catch (FileNotFoundException | ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {

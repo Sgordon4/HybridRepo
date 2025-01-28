@@ -1,9 +1,6 @@
 package aaa.sgordon.hybridrepo;
 
-import android.content.Context;
 import android.net.Uri;
-
-import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -12,8 +9,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -38,13 +37,12 @@ import aaa.sgordon.hybridrepo.remote.types.RFile;
 import aaa.sgordon.hybridrepo.remote.types.RJournal;
 
 public class RemoteJournalTest {
-	private static final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
-	private static final Path emptyFile = Paths.get(context.getDataDir().toString(), "temp", "empty.txt");
+	private static Path emptyFile;
 	private static final String emptyChecksum = RFile.defaultChecksum;
 
 	private static final Uri externalUri_1MB = Uri.parse("https://sample-videos.com/img/Sample-jpg-image-1mb.jpg");
-	private static final Path smallFile = Paths.get(context.getDataDir().toString(), "temp", "smallFile.txt");
+	private static Path smallFile;
 	private static final String smallChecksum = "35C461DEE98AAD4739707C6CCA5D251A1617BFD928E154995CA6F4CE8156CFFC";
 
 	private static final UUID accountUID = UUID.fromString("b16fe0ba-df94-4bb6-ad03-aab7e47ca8c3");
@@ -52,7 +50,10 @@ public class RemoteJournalTest {
 
 
 	@BeforeAll
-	public static void setUp() throws IOException, NoSuchFieldException, IllegalAccessException {
+	public static void setUp(@TempDir File tempDir) throws IOException, NoSuchFieldException, IllegalAccessException {
+		emptyFile = Paths.get(tempDir.toString(), "temp", "empty.txt");
+		smallFile = Paths.get(tempDir.toString(), "temp", "smallFile.txt");
+
 		//The queries server-side exclude all journals created by our deviceuid.
 		//Therefore we have to change the deviceuid we send over or we will receive no data for the tests.
 		Field deviceuid = JournalConnector.class.getDeclaredField("deviceUID");

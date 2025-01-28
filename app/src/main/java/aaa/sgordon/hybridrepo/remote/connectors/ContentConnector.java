@@ -212,10 +212,6 @@ public class ContentConnector {
 				throw new IOException("Unexpected code " + response.code());
 			if(response.body() == null)
 				throw new IOException("Response body is null");
-
-			System.out.println("Complete multipart complete");
-			String responseData = response.body().string();
-			System.out.println(responseData);
 		}
 	}
 

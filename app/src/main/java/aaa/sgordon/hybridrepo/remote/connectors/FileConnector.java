@@ -236,12 +236,18 @@ public class FileConnector {
 	// Delete
 	//---------------------------------------------------------------------------------------------
 
-	public void delete(@NonNull UUID fileUID) throws FileNotFoundException, IOException {
+	public void delete(@NonNull UUID fileUID, @NonNull UUID accountUID) throws FileNotFoundException, IOException {
 		//Log.i(TAG, String.format("\nDELETE FILE called with fileUID='"+fileUID+"'"));
-		String url = Paths.get(baseServerUrl, "files", fileUID.toString()).toString();
+		String url = Paths.get(baseServerUrl, "files").toString();
 
+		//Compile all necessary properties into a form body.
+		FormBody.Builder builder = new FormBody.Builder();
+		builder.add("fileuid", fileUID.toString());
+		builder.add("accountuid", accountUID.toString());
+		builder.add("deviceuid", deviceUID.toString());
+		RequestBody body = builder.build();
 
-		Request request = new Request.Builder().url(url).delete().build();
+		Request request = new Request.Builder().url(url).delete(body).build();
 		try (Response response = client.newCall(request).execute()) {
 			if(response.code() == 404)
 				throw new FileNotFoundException("File not found! ID: '"+fileUID+"'");
