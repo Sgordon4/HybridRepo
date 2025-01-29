@@ -49,8 +49,10 @@ public class LocalRepo {
 	}
 
 	public static synchronized void initialize(Context context) {
-		LocalDatabase db = new LocalDatabase.DBBuilder().newInstance(context);
-		if (instance == null) instance = new LocalRepo(db, context.getApplicationInfo().dataDir);
+		if (instance == null) {
+			LocalDatabase db = new LocalDatabase.DBBuilder().newInstance(context);
+			instance = new LocalRepo(db, context.getApplicationInfo().dataDir);
+		}
 	}
 	public static synchronized void initialize(LocalDatabase database, String storageDir) {
 		if (instance == null) instance = new LocalRepo(database, storageDir);
@@ -167,11 +169,7 @@ public class LocalRepo {
 
 
 		//Hash the user attributes in the updated props
-		try {
-			byte[] hash = MessageDigest.getInstance("SHA-256").digest(fileProps.userattr.toString().getBytes());
-			fileProps.attrhash = Utilities.bytesToHex(hash);
-		} catch (NoSuchAlgorithmException e) { throw new RuntimeException(e); }
-
+		fileProps.attrhash = Utilities.computeChecksum(fileProps.userattr.toString().getBytes());
 
 		//Create/update the file
 		database.getFileDao().put(fileProps);
@@ -284,7 +282,7 @@ public class LocalRepo {
 
 	@NonNull
 	public List<LJournal> getLatestChangesFor(int journalID, @Nullable UUID accountUID, @Nullable UUID[] fileUIDs) {
-		Log.v(TAG, String.format("REMOTE JOURNAL GET LATEST called with journalID='%s', accountUID='%s'", journalID, accountUID));
+		Log.v(TAG, String.format("LOCAL JOURNAL GET LATEST called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		if(fileUIDs == null) fileUIDs = new UUID[0];
@@ -293,13 +291,16 @@ public class LocalRepo {
 
 		if(fileUIDs.length == 0)
 			return database.getJournalDao().getLatestChangeFor(accountUID, journalID);
-		return database.getJournalDao().getLatestChangeFor(accountUID, journalID, fileUIDs);
+		else if(accountUID == null)
+			return database.getJournalDao().getLatestChangeFor(journalID, fileUIDs);
+		else
+			return database.getJournalDao().getLatestChangeFor(accountUID, journalID, fileUIDs);
 	}
 
 
 	@NonNull
 	public List<LJournal> getAllChangesFor(int journalID, @Nullable UUID accountUID, @Nullable UUID[] fileUIDs) {
-		Log.v(TAG, String.format("REMOTE JOURNAL GET ALL called with journalID='%s', accountUID='%s'", journalID, accountUID));
+		Log.v(TAG, String.format("LOCAL JOURNAL GET ALL called with journalID='%s', accountUID='%s'", journalID, accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		if(fileUIDs == null) fileUIDs = new UUID[0];
@@ -308,6 +309,9 @@ public class LocalRepo {
 
 		if(fileUIDs.length == 0)
 			return database.getJournalDao().getAllChangesFor(accountUID, journalID);
-		return database.getJournalDao().getAllChangesFor(accountUID, journalID, fileUIDs);
+		else if(accountUID == null)
+			return database.getJournalDao().getAllChangesFor(journalID, fileUIDs);
+		else
+			return database.getJournalDao().getAllChangesFor(accountUID, journalID, fileUIDs);
 	}
 }

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.util.Log;
+import android.util.Pair;
 
 import androidx.annotation.NonNull;
 
@@ -51,8 +52,10 @@ public class Sync {
 	}
 
 	public static synchronized void initialize(Context context) {
-		HybridHelpDatabase hdb = new HybridHelpDatabase.DBBuilder().newInstance(context);
-		if (instance == null) instance = new Sync(hdb, context);
+		if (instance == null) {
+			HybridHelpDatabase hdb = new HybridHelpDatabase.DBBuilder().newInstance(context);
+			instance = new Sync(hdb, context);
+		}
 	}
 	public static synchronized void initialize(HybridHelpDatabase database, Context context) {
 		if (instance == null) instance = new Sync(database, context);
@@ -120,7 +123,8 @@ public class Sync {
 	*/
 
 
-	public void sync(@NonNull UUID fileUID, int localSyncID, int remoteSyncID) throws IllegalStateException, ConnectException {
+	//Returns the highest journalIDs it found for Local::Remote
+	public Pair<Integer, Integer> sync(@NonNull UUID fileUID, int localSyncID, int remoteSyncID) throws IllegalStateException, ConnectException {
 		try {
 			localRepo.lock(fileUID);
 			localRepo.getFileProps(fileUID);
@@ -139,8 +143,13 @@ public class Sync {
 
 		//If neither repo has changes, we're done
 		if(!localHasChanges && !remoteHasChanges) {
-			return;
+			return new Pair<>(localSyncID, remoteSyncID);
 		}
+
+		if(remoteHasChanges)
+			remoteSyncID = remoteLatestChange.get(0).journalid;
+		if(localHasChanges)
+			localSyncID = localLatestChange.get(0).journalid;
 
 
 		//If the latest remote journal has "isdeleted=true"...
@@ -168,7 +177,7 @@ public class Sync {
 
 				localRepo.unlock(fileUID);
 			}
-			return;
+			return new Pair<>(localSyncID, remoteSyncID);
 		}
 
 		//If the latest local journal has "isdeleted=true"...
@@ -180,7 +189,7 @@ public class Sync {
 			} catch (FileNotFoundException e) {
 				//Do nothing
 			}
-			return;
+			return new Pair<>(localSyncID, remoteSyncID);
 		}
 
 		//----------------------------------------------------------------
@@ -231,12 +240,13 @@ public class Sync {
 					remoteRepo.putAttributeProps(HFile.toRemoteFile(localProps), remoteProps.attrhash);
 
 
-				//Update the zoning info for this file just in case
-				HZone zoningInfo = new HZone(fileUID, true, true);
-				zoningDAO.put(zoningInfo);
+				//DO NOT update zoning info. A local update could be content stored for upload to remote,
+				// or it could even just be an attribute change. Only zoning should update isLocal.
 			}
 			catch (ContentsNotFoundException e) {
-				//Log this, but then just update the zoning data. This shouldn't happen, but we can smooth it out.
+				//The content should have been either temp written content or permanent.
+				//Log this, and now is a good time to update the zoning data in case it was corrupted.
+				//This shouldn't happen, but we can smooth it out.
 				Log.e(TAG, "Local contents not found when syncing to remote, something went wrong!");
 				HZone zoningInfo = new HZone(fileUID, false, true);
 				zoningDAO.put(zoningInfo);
@@ -245,7 +255,7 @@ public class Sync {
 				//This is fine. Nothing to sync here if a file is missing, so we're done. DO NOT update zoning.
 			}
 
-			return;
+			return new Pair<>(localSyncID, remoteSyncID);
 		}
 
 
@@ -257,7 +267,7 @@ public class Sync {
 			catch (FileNotFoundException e) {
 				//If remote doesn't exist but the latest remote journal wasn't a delete record,
 				// it's highly likely it was *just* deleted. Wait for next sync. DO NOT update zoning.
-				return;
+				return new Pair<>(localSyncID, remoteSyncID);
 			}
 
 			try {
@@ -295,7 +305,7 @@ public class Sync {
 				localRepo.unlock(fileUID);
 			}
 
-			return;
+			return new Pair<>(localSyncID, remoteSyncID);
 		}
 	}
 }

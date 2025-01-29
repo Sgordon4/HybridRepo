@@ -3,8 +3,19 @@ package aaa.sgordon.hybridrepo;
 import androidx.annotation.NonNull;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 public class Utilities {
+
+
+	public static String computeChecksum(@NonNull byte[] data) {
+		try {
+			byte[] hash = MessageDigest.getInstance("SHA-256").digest(data);
+			return bytesToHex(hash);
+		} catch (NoSuchAlgorithmException e) { throw new RuntimeException(e); }
+	}
 
 	//https://stackoverflow.com/a/9855338
 	private static final byte[] HEX_ARRAY = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);

@@ -2,6 +2,7 @@ package aaa.sgordon.hybridrepo.hybrid.jobs.sync;
 
 import android.content.Context;
 import android.util.Log;
+import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.work.Constraints;
@@ -191,18 +192,25 @@ public class SyncWorkers {
 			assert fileUIDString != null;
 			UUID fileUID = UUID.fromString(fileUIDString);
 
-			int localSyncID = getInputData().getInt("LOCAL_JID", -1);
-			assert localSyncID != -1;
+			String localString = getInputData().getString("LOCAL_JID");
+			assert localString != null;
+			int localSyncID = Integer.parseInt(localString);
 
-			int remoteSyncID = getInputData().getInt("REMOTE_JID", -1);
-			assert remoteSyncID != -1;
+			String remoteString = getInputData().getString("REMOTE_JID");
+			assert remoteString != null;
+			int remoteSyncID = Integer.parseInt(remoteString);
 
 			Log.i(TAG, "SyncWorker syncing for FileUID='"+fileUID+"'");
 
 
 
 			try {
-				Sync.getInstance().sync(fileUID, localSyncID, remoteSyncID);
+				Pair<Integer, Integer> syncIDs = Sync.getInstance().sync(fileUID, localSyncID, remoteSyncID);
+
+				Data.Builder data = new Data.Builder();
+				data.putString("LOCAL_JID", String.valueOf(syncIDs.first));
+				data.putString("REMOTE_JID", String.valueOf(syncIDs.second));
+				return Result.success(data.build());
 			}
 			//If the sync fails due to another update happening before we could finish the sync, requeue it for later
 			catch (IllegalStateException e) {
@@ -214,8 +222,6 @@ public class SyncWorkers {
 				Log.w(TAG, "SyncWorker requeueing due to connection issues!");
 				return Result.retry();
 			}
-
-			return Result.success();
 		}
 	}
 }

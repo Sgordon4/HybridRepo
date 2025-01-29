@@ -123,8 +123,9 @@ public class HybridAPI {
 	}
 
 
-	//TODO Should this just return the fileUID?
-	public HFile createFile(@NonNull UUID accountUID, boolean isDir, boolean isLink) {
+	//Returns the FileUID of the new file
+	public UUID createFile(@NonNull UUID accountUID, boolean isDir, boolean isLink) {
+		//Note: Locking for this file doesn't really matter, since nothing can know about it yet
 		UUID fileUID = UUID.randomUUID();
 		LFile newFile = new LFile(fileUID, accountUID);
 
@@ -134,8 +135,15 @@ public class HybridAPI {
 		//Create blank file contents
 		localRepo.writeContents(HFile.defaultChecksum, "".getBytes());
 
-		//Put the properties themselves
-		newFile = localRepo.putFileProps(newFile, "", "");
+		try {
+			lockLocal(fileUID);
+			//Put the properties themselves
+			newFile = localRepo.putFileProps(newFile, "", "");
+		}
+		finally {
+			unlockLocal(fileUID);
+		}
+
 
 		//Add a journal entry
 		JsonObject changes = new JsonObject();
@@ -150,7 +158,7 @@ public class HybridAPI {
 		HZone newZoningInfo = new HZone(fileUID, true, false);
 		Sync.getInstance().zoningDAO.put(newZoningInfo);
 
-		return HFile.fromLocalFile(newFile);
+		return newFile.fileuid;
 	}
 
 
@@ -174,17 +182,16 @@ public class HybridAPI {
 	//---------------------------------------------------------------------------------------------
 
 
-	//TODO Should this just return attrHash?
-	public HFile setAttributes(@NonNull UUID fileUID, @NonNull JsonObject attributes, @NonNull String prevAttrHash) throws FileNotFoundException {
+	//Returns SHA-256 hash of the given attributes. Referenced as attrHash in file properties
+	public String setAttributes(@NonNull UUID fileUID, @NonNull JsonObject attributes, @NonNull String prevAttrHash) throws FileNotFoundException {
 		localRepo.ensureLockHeld(fileUID);
 
-		LFile oldProps = localRepo.getFileProps(fileUID);
-		LFile newProps = localRepo.getFileProps(fileUID);
+		LFile props = localRepo.getFileProps(fileUID);
 
 		//Check that the current attribute checksum matches what we were given to ensure we won't be overwriting any data
-		String currAttrHash = oldProps.attrhash;
+		String currAttrHash = props.attrhash;
 		if(!Objects.equals(currAttrHash, prevAttrHash))
-			throw new IllegalStateException(String.format("Cannot set attributes, checksums don't match! FileUID='%s'", fileUID));
+			throw new IllegalStateException(String.format("Cannot set attributes, attrHashes don't match! FileUID='%s'", fileUID));
 
 
 		//Get the checksum of the attributes
@@ -196,25 +203,25 @@ public class HybridAPI {
 
 
 		//Update the properties with the new info received
-		newProps.userattr = attributes;
-		newProps.attrhash = newAttrHash;
-		newProps.changetime = Instant.now().getEpochSecond();
-		newProps = localRepo.putFileProps(newProps, newProps.checksum, oldProps.attrhash);
+		props.userattr = attributes;
+		props.attrhash = newAttrHash;
+		props.changetime = Instant.now().getEpochSecond();
+		props = localRepo.putFileProps(props, props.checksum, currAttrHash);
 
 		//Add a journal entry
 		JsonObject changes = new JsonObject();
-		changes.addProperty("attrhash", newProps.checksum);
-		changes.addProperty("changetime", newProps.changetime);
+		changes.addProperty("attrhash", props.checksum);
+		changes.addProperty("changetime", props.changetime);
 		LJournal journal = new LJournal(fileUID, currentAccount, changes);
 		localRepo.putJournalEntry(journal);
 
-		return HFile.fromLocalFile( newProps );
+		return props.attrhash;
 	}
 
 
 
-	//TODO Should this just return checksum?
-	public HFile writeFile(@NonNull UUID fileUID, @NonNull byte[] content, @NonNull String prevChecksum) throws FileNotFoundException {
+	//Returns SHA-256 checksum of the given contents. Referenced as checksum in the file properties
+	public String writeFile(@NonNull UUID fileUID, @NonNull byte[] content, @NonNull String prevChecksum) throws FileNotFoundException {
 		localRepo.ensureLockHeld(fileUID);
 
 		//Check that the current file checksum matches what we were given to ensure we won't be overwriting any data
@@ -250,12 +257,12 @@ public class HybridAPI {
 		LJournal journal = new LJournal(fileUID, currentAccount, changes);
 		localRepo.putJournalEntry(journal);
 
-		return HFile.fromLocalFile( props );
+		return props.checksum;
 	}
 
 
-	//TODO Should this just return checksum? Maybe size too?
-	public HFile writeFile(@NonNull UUID fileUID, @NonNull Uri content, @NonNull String checksum, @NonNull String prevChecksum) throws FileNotFoundException {
+	//Returns SHA-256 checksum of the given contents. Referenced as checksum in the file properties
+	public String writeFile(@NonNull UUID fileUID, @NonNull Uri content, @NonNull String checksum, @NonNull String prevChecksum) throws FileNotFoundException {
 		localRepo.ensureLockHeld(fileUID);
 		LFile props = localRepo.getFileProps(fileUID);
 
@@ -283,18 +290,16 @@ public class HybridAPI {
 		LJournal journal = new LJournal(fileUID, currentAccount, changes);
 		localRepo.putJournalEntry(journal);
 
-		return HFile.fromLocalFile( props );
+		return props.checksum;
 	}
 
 
 
-	//TODO Should this just return fileUID?
-	public HFile importFile(@NonNull Uri content, @NonNull String prevChecksum) throws IOException {
-		UUID fileUID = UUID.randomUUID();
-
+	//Returns new FileUID for imported file
+	public UUID importFile(@NonNull Uri content, @NonNull String prevChecksum) throws IOException {
 		//Write the source to a temp file so we can get the checksum
 		File appCacheDir = MyApplication.getAppContext().getCacheDir();
-		File tempFile = Files.createTempFile(appCacheDir.toPath(), fileUID.toString(), null).toFile();
+		File tempFile = Files.createTempFile(appCacheDir.toPath(), UUID.randomUUID().toString(), null).toFile();
 
 		String checksum;
 		try (InputStream in = new URL(content.toString()).openStream();
@@ -316,14 +321,15 @@ public class HybridAPI {
 		LContent contentProps = localRepo.writeContents(checksum, Uri.fromFile(tempFile));
 
 		//Create a new file
-		HFile fileProps = createFile(fileUID, false, false);
+		UUID fileUID = createFile(currentAccount, false, false);
 
 		//Update the file props with the updated content properties
+		LFile fileProps = localRepo.getFileProps(fileUID);
 		fileProps.checksum = contentProps.checksum;
 		fileProps.filesize = contentProps.size;
 		fileProps.changetime = Instant.now().getEpochSecond();
 		fileProps.modifytime = Instant.now().getEpochSecond();
-		LFile newFile = localRepo.putFileProps(fileProps.toLocalFile(), prevChecksum, fileProps.attrhash);
+		LFile newFile = localRepo.putFileProps(fileProps, prevChecksum, fileProps.attrhash);
 
 		//Add another journal entry after the create entry
 		JsonObject changes = new JsonObject();
@@ -333,7 +339,7 @@ public class HybridAPI {
 		LJournal journal = new LJournal(fileUID, currentAccount, changes);
 		localRepo.putJournalEntry(journal);
 
-		return HFile.fromLocalFile( newFile );
+		return newFile.fileuid;
 	}
 
 	public void exportFile(@NonNull UUID fileUID, @NonNull Uri destination) {
