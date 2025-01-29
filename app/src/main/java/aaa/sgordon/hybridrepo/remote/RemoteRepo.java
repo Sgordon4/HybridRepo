@@ -93,7 +93,7 @@ public class RemoteRepo {
 	//---------------------------------------------------------------------------------------------
 
 	public RAccount getAccountProps(@NonNull UUID accountUID) throws FileNotFoundException, ConnectException {
-		Log.i(TAG, String.format("GET SERVER ACCOUNT PROPS called with accountUID='%s'", accountUID));
+		Log.i(TAG, String.format("REMOTE GET ACCOUNT PROPS called with accountUID='%s'", accountUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		JsonObject accountProps;
@@ -113,7 +113,7 @@ public class RemoteRepo {
 
 
 	public void putAccountProps(@NonNull RAccount accountProps) throws ConnectException {
-		Log.i(TAG, String.format("PUT SERVER ACCOUNT PROPS called with accountUID='%s'", accountProps.accountuid));
+		Log.i(TAG, String.format("REMOTE PUT ACCOUNT PROPS called with accountUID='%s'", accountProps.accountuid));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
@@ -159,7 +159,7 @@ public class RemoteRepo {
 
 	@NonNull
 	public RFile getFileProps(@NonNull UUID fileUID) throws FileNotFoundException, ConnectException {
-		Log.v(TAG, String.format("SERVER GET FILE PROPS called with fileUID='%s'", fileUID));
+		Log.v(TAG, String.format("REMOTE GET FILE PROPS called with fileUID='%s'", fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
@@ -173,7 +173,6 @@ public class RemoteRepo {
 		}
 	}
 	public boolean doesFileExist(@NonNull UUID fileUID) throws ConnectException {
-		Log.v(TAG, "SERVER GET FILE PROPS EXIST called.");
 		try {
 			getFileProps(fileUID);
 			return true;
@@ -269,7 +268,7 @@ public class RemoteRepo {
 
 
 	public void deleteFileProps(@NonNull UUID fileUID) throws FileNotFoundException, ConnectException {
-		Log.i(TAG, String.format("DELETE SERVER FILE called with fileUID='%s'", fileUID));
+		Log.i(TAG, String.format("REMOTE DELETE FILE called with fileUID='%s'", fileUID));
 		if(isOnMainThread()) throw new NetworkOnMainThreadException();
 
 		try {
@@ -333,7 +332,7 @@ public class RemoteRepo {
 	//Returns the fileSize of the provided source
 	//WARNING: DOES NOT UPDATE FILE PROPERTIES
 	public RContent uploadData(@NonNull String name, @NonNull File source) throws FileNotFoundException, ConnectException {
-		Log.i(TAG, "\nPUT SERVER CONTENTS called with source='"+source.getPath()+"'");
+		Log.i(TAG, "\nREMOTE PUT CONTENTS called with source='"+source.getPath()+"'");
 
 		if (!source.exists()) throw new FileNotFoundException("Source file not found! Path: '"+source.getPath()+"'");
 		int filesize = (int) source.length();
@@ -342,14 +341,16 @@ public class RemoteRepo {
 			//If the file is small enough, upload it to one url
 			if(filesize <= ContentConnector.MIN_PART_SIZE) {
 				Log.i(TAG, "Source is <= 5MB, uploading directly.");
+				Log.i(TAG, "... Getting content upload URL");
 				String uploadUrl = contentConn.getUploadUrl(name);
 
 				byte[] buffer = new byte[filesize];
 				try (BufferedInputStream in = new BufferedInputStream( Files.newInputStream(source.toPath()) )) {
 					int bytesRead = in.read(buffer);
+					Log.i(TAG, "... Uploading to URL");
 					String ETag = contentConn.uploadToUrl(buffer, uploadUrl);
 				}
-				Log.i(TAG, "Direct upload complete!");
+				Log.i(TAG, "... Direct upload complete!");
 			}
 			//Otherwise, we need to multipart upload
 			else {
@@ -373,6 +374,7 @@ public class RemoteRepo {
 						int bytesRead = in.read(buffer);
 
 						String uri = uris.get(i).toString();
+						Log.i(TAG, "... Uploading to URL");
 						String ETag = contentConn.uploadToUrl(buffer, uri);
 
 						ETags.add(new ContentConnector.ETag(i+1, ETag));
@@ -382,14 +384,30 @@ public class RemoteRepo {
 
 				//Confirm the multipart upload is completed, passing the information we've gathered thus far
 				contentConn.completeMultipart(name, uploadID, ETags);
-				Log.i(TAG, "Multipart upload complete!");
+				Log.i(TAG, "... Multipart upload complete!");
 			}
 
 
 			//Now that the data has been written, create a new entry in the content table
+			Log.i(TAG, "... Putting content props");
 			return contentConn.putProps(name, filesize);
 
 		} catch (ConnectException e) {
+			throw e;
+		} catch (SocketTimeoutException | SocketException e) {
+			throw new ConnectException();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+
+	//Note: This isn't intended to be used outside of testing
+	public void deleteContentProps(@NonNull String name) throws ContentsNotFoundException, ConnectException {
+		Log.v(TAG, String.format("\nREMOTE DELETE CONTENT PROPS called with name='%s'", name));
+		try {
+			contentConn.deleteProps(name);
+		} catch (ContentsNotFoundException | ConnectException e) {
 			throw e;
 		} catch (SocketTimeoutException | SocketException e) {
 			throw new ConnectException();

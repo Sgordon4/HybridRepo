@@ -119,7 +119,7 @@ public class ZoningWorker extends Worker {
 			return Result.failure();
 		}
 
-		Log.d(TAG, String.format("Zoning Worker changing zones from %s:%s to %s:%s for fileUID='%s'",
+		Log.i(TAG, String.format("Zoning Worker changing zones from %s:%s to %s:%s for fileUID='%s'",
 				currentZones.isLocal, currentZones.isRemote, shouldBeLocal, shouldBeRemote, fileUID));
 
 		//If the zones for this file are already set to these values, do nothing
@@ -141,10 +141,10 @@ public class ZoningWorker extends Worker {
 
 		//If we're trying to download data to Local...
 		if(!currentZones.isLocal && shouldBeLocal) {
-			Log.d(TAG, "Zoning Worker trying to download data to Local! FileUID='"+fileUID+"'");
+			Log.i(TAG, "Zoning Worker trying to download data to Local! FileUID='"+fileUID+"'");
 
 			if(!currentZones.isRemote)
-				Log.d(TAG, "Zones say file shouldn't exist on remote! Skipping download! FileUID='"+fileUID+"'");
+				Log.w(TAG, "Zones say file shouldn't exist on remote! Skipping download! FileUID='"+fileUID+"'");
 
 			else {
 				Result downloadResult = downloadToLocal(fileUID);
@@ -158,10 +158,10 @@ public class ZoningWorker extends Worker {
 
 		//If we're trying to upload data to Remote (and the file exists on Local)...
 		if(!currentZones.isRemote && shouldBeRemote) {
-			Log.d(TAG, "Zoning Worker trying to upload data to Remote! FileUID='"+fileUID+"'");
+			Log.i(TAG, "Zoning Worker trying to upload data to Remote! FileUID='"+fileUID+"'");
 
 			if(!currentZones.isLocal)
-				Log.d(TAG, "Zones say file shouldn't exist on local! Skipping upload! FileUID='"+fileUID+"'");
+				Log.w(TAG, "Zones say file shouldn't exist on local! Skipping upload! FileUID='"+fileUID+"'");
 
 			else {
 				Result uploadResult = uploadToRemote(fileUID);
@@ -177,7 +177,7 @@ public class ZoningWorker extends Worker {
 
 		//If we're trying to remove the file from Local...
 		if(currentZones.isLocal && !shouldBeLocal) {
-			Log.d(TAG, "Zoning Worker trying to remove file from Local! FileUID='"+fileUID+"'");
+			Log.i(TAG, "Zoning Worker trying to remove file from Local! FileUID='"+fileUID+"'");
 
 			//We don't actually want to do anything but change the zoning info.
 			//We ALWAYS want local props if the file exists on remote, and sync will sort things out if the remote file is deleted.
@@ -189,7 +189,7 @@ public class ZoningWorker extends Worker {
 
 		//If we're trying to remove the file from Remote...
 		if(currentZones.isRemote && !shouldBeRemote) {
-			Log.d(TAG, "Zoning Worker trying to remove file from Remote! FileUID='"+fileUID+"'");
+			Log.i(TAG, "Zoning Worker trying to remove file from Remote! FileUID='"+fileUID+"'");
 
 			Result removeRemoteResult = removeFromRemote(fileUID);
 			if(!removeRemoteResult.equals(Result.success()))
@@ -229,6 +229,7 @@ public class ZoningWorker extends Worker {
 					// OR edited data was just written recently and we want to preserve that.
 					//The next sync will rectify things if stuff just hasn't been written to Remote yet.
 					localRepo.getContentProps(localProps.checksum);
+					Log.v(TAG, "Local contents already exist. In order to preserve possible edits, no download will be performed.");
 				}
 				catch (ContentsNotFoundException e) {
 					//If the contents don't exist in Local, we can guarantee there is no newly written data we need to preserve.
@@ -236,6 +237,7 @@ public class ZoningWorker extends Worker {
 					//Throw the retrieved props straight into Local. This is acceptable since we know there's no data to-be-written from Local.
 					localRepo.writeContents(localProps.checksum, remoteContent);
 					localRepo.putFileProps(HFile.fromRemoteFile(remoteProps).toLocalFile(), localProps.checksum, localProps.attrhash);
+					Log.v(TAG, "Updated contents downloaded from remote.");
 				}
 				return Result.success();
 			}
@@ -268,14 +270,22 @@ public class ZoningWorker extends Worker {
 		RemoteRepo remoteRepo = RemoteRepo.getInstance();
 
 		try {
-			//We only want to upload the data if the file does not already exist on Remote. Check just in case the zones are out of date.
+			//We only want to create/upload the file if the file does not already exist on Remote. Check just in case the zones are out of date.
 			if(remoteRepo.doesFileExist(fileUID))
 				throw new FileAlreadyExistsException("Remote file already exists!");
 
 			LFile localProps = localRepo.getFileProps(fileUID);
 			Uri localContent = localRepo.getContentUri(localProps.checksum);
 
-			remoteRepo.uploadData(localProps.checksum, new File(localContent.getPath()));
+			try {
+				//Only upload the contents if the contents don't already exist
+				remoteRepo.getContentProps(localProps.checksum);
+				Log.v(TAG, "Remote contents already exist. No need to re-upload.");
+			} catch (ContentsNotFoundException e) {
+				remoteRepo.uploadData(localProps.checksum, new File(localContent.getPath()));
+				Log.v(TAG, "Contents uploaded to remote.");
+			}
+
 			remoteRepo.createFile(HFile.toRemoteFile(localProps));
 
 			return Result.success();

@@ -65,7 +65,6 @@ public class ContentConnector {
 	//TODO Have this triggered serverside by an IBM rule, not from manually calling it here
 	//Make an entry in the server's database table for this content
 	public RContent putProps(@NonNull String name, int size) throws IOException {
-		Log.i(TAG, "PUTTING CONTENT PROPS...");
 		String url = Paths.get(baseServerUrl, "content").toString();
 
 		RequestBody body = new FormBody.Builder()
@@ -84,6 +83,21 @@ public class ContentConnector {
 
 			String responseData = response.body().string();
 			return new Gson().fromJson(responseData, RContent.class);
+		}
+	}
+
+
+	public void deleteProps(@NonNull String name) throws IOException {
+		String url = Paths.get(baseServerUrl, "content", name).toString();
+
+		Request request = new Request.Builder().url(url).delete().build();
+		try (Response response = client.newCall(request).execute()) {
+			if(response.code() == 404)
+				throw new ContentsNotFoundException("Content not found! Hash: '"+name+"'");
+			if (!response.isSuccessful())
+				throw new IOException("Unexpected code " + response.code());
+			if(response.body() == null)
+				throw new IOException("Response body is null");
 		}
 	}
 
@@ -113,7 +127,6 @@ public class ContentConnector {
 
 	//Get a presigned url for uploading data
 	public String getUploadUrl(@NonNull String name) throws IOException {
-		Log.i(TAG, "GETTING CONTENT UPLOAD URL...");
 		String url = Paths.get(baseServerUrl, "content", "data", "uploadurl", name).toString();
 
 		Request request = new Request.Builder().url(url).build();
@@ -130,8 +143,6 @@ public class ContentConnector {
 
 	//Helper method
 	public String uploadToUrl(@NonNull byte[] bytes, @NonNull String url) throws IOException {
-		Log.i(TAG, "UPLOADING TO URL...");
-
 		Request upload = new Request.Builder()
 				.url(url)
 				.put(RequestBody.create(bytes, MediaType.parse("application/octet-stream")))

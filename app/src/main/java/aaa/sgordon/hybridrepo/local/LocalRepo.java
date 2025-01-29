@@ -130,7 +130,6 @@ public class LocalRepo {
 		return file;
 	}
 	public boolean doesFileExist(@NonNull UUID fileUID) {
-		Log.v(TAG, "LOCAL GET FILE PROPS EXIST called.");
 		try {
 			getFileProps(fileUID);
 			return true;
@@ -204,7 +203,7 @@ public class LocalRepo {
 
 	//TODO Check with Cleanup to decide if we should show content or if it's delete marked
 	public LContent getContentProps(@NonNull String name) throws ContentsNotFoundException {
-		Log.i(TAG, String.format("\nLOCAL GET CONTENT PROPS called with name='%s'", name));
+		Log.v(TAG, String.format("\nLOCAL GET CONTENT PROPS called with name='%s'", name));
 		LContent props = database.getContentDao().get(name);
 		if(props == null) throw new ContentsNotFoundException(name);
 		return props;
@@ -234,7 +233,9 @@ public class LocalRepo {
 		} catch (ContentsNotFoundException e) {
 			//If the content doesn't already exist, write it
 			try {
-				return contentHelper.writeContents(name, contents);
+				LContent newContents = contentHelper.writeContents(name, contents);
+				database.getContentDao().put(newContents);
+				return newContents;
 			} catch (IOException ex) {
 				throw new RuntimeException(ex);
 			}
@@ -251,7 +252,9 @@ public class LocalRepo {
 		} catch (ContentsNotFoundException e) {
 			//If the content doesn't already exist, write it
 			try {
-				return contentHelper.writeContents(name, source);
+				LContent newContents = contentHelper.writeContents(name, source);
+				database.getContentDao().put(newContents);
+				return newContents;
 			} catch (IOException ex) {
 				throw new RuntimeException(ex);
 			}
