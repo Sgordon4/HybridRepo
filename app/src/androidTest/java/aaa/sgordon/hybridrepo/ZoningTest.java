@@ -156,6 +156,22 @@ public class ZoningTest {
 		assertIsRemoteOnly();
 	}
 
+
+	@Test
+	public void zone_None() {
+		assertNoZoningData();
+		startFromLocal();
+		assertIsLocalOnly();
+
+		//Attempt to move zone to no repo.
+		ZoningWorker worker = launchWorker(InstrumentationRegistry.getInstrumentation().getContext(),
+				fileUID, false, false);
+		ListenableWorker.Result result = worker.doWork();
+		Assertions.assertEquals(result, ListenableWorker.Result.failure());
+
+		assertIsLocalOnly();
+	}
+
 	//---------------------------------------------------------------------------------------------
 
 	@Test
@@ -354,9 +370,7 @@ public class ZoningTest {
 		});
 	}
 	private void assertIsRemoteOnly() {
-		System.out.println("Asserting isRemoteOnly");
 		assertZoningCorrect(false, true);
-		System.out.println("Zoning is correct");
 
 		//For Local:
 		//A file's properties will always be on local if the file hasn't been deleted, so we shouldn't check for FileNotFound
@@ -367,7 +381,6 @@ public class ZoningTest {
 			RFile props = rRepo.getFileProps(fileUID);
 			rRepo.getContentProps(props.checksum);
 		});
-		System.out.println("Does not throw");
 	}
 	private void assertIsLocalAndRemote() {
 		System.out.println("Asserting isLocalAndRemote");
@@ -380,12 +393,6 @@ public class ZoningTest {
 			RFile props = rRepo.getFileProps(fileUID);
 			rRepo.getContentProps(props.checksum);
 		});
-	}
-	//TODO This should fail, I don't actually remember what zoning does here (or if it allows it)
-	private void assertIsNone() {
-		assertZoningCorrect(false, false);
-		Assertions.assertThrowsExactly(FileNotFoundException.class, () -> lRepo.getFileProps(fileUID));
-		Assertions.assertThrowsExactly(FileNotFoundException.class, () -> rRepo.getFileProps(fileUID));
 	}
 
 

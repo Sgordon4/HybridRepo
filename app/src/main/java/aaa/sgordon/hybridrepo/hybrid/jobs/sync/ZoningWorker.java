@@ -111,6 +111,11 @@ public class ZoningWorker extends Worker {
 		assert remoteString != null;
 		boolean shouldBeRemote = Boolean.parseBoolean(remoteString);
 
+		if(!shouldBeLocal && !shouldBeRemote) {
+			Log.e(TAG, "Cannot set both zones to false! FileUID='"+fileUID+"'");
+			return Result.failure();
+		}
+
 
 		HZoningDAO dao =  Sync.getInstance().zoningDAO;
 		HZone currentZones = dao.get(fileUID);
