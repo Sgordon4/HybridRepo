@@ -45,7 +45,7 @@ public class RemoteRepo {
 	private static final String baseServerUrl = "http://10.0.2.2:3306";
 	//private static final String baseServerUrl = "http://localhost:3306";
 
-	private UUID deviceUID = UUID.randomUUID();
+	private UUID deviceUID;
 	private UUID currentAccount;
 
 	public final AccountConnector accountConn;
@@ -61,11 +61,14 @@ public class RemoteRepo {
 		private static final RemoteRepo INSTANCE = new RemoteRepo();
 	}
 	private RemoteRepo() {
+		//TODO Store this in a file
+		deviceUID = UUID.fromString("fee96d0e-3953-4a51-aff3-55ce65a70bcc");
+
 		OkHttpClient client = new OkHttpClient().newBuilder()
 				.addInterceptor(new LogInterceptor())
 				.followRedirects(true)
 				.connectTimeout(2, TimeUnit.SECONDS)
-				.readTimeout(30, TimeUnit.SECONDS)		//Long timeout for longPolling
+				.readTimeout(5, TimeUnit.SECONDS)
 				.writeTimeout(5, TimeUnit.SECONDS)
 				.followSslRedirects(true)
 				.build();

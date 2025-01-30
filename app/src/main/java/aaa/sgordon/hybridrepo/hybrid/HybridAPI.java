@@ -35,18 +35,6 @@ import aaa.sgordon.hybridrepo.local.types.LFile;
 import aaa.sgordon.hybridrepo.local.types.LJournal;
 import aaa.sgordon.hybridrepo.remote.RemoteRepo;
 
-
-/*
-TODO I don't want to expose HFile to the users of this API.
- Go through this and make sure no methods return/require HFile or similar things to operate.
- E.g. setAttributes() should require a JsonObject, or a Map, and return attrHash.
- write() should require the content, and should return checksum and size somehow.
- Maybe even add another function to getSize(), and have write just return checksum.
- '
- With that said, does HFile even need to exist?
- As static converter functions sure, but idk if we should keep the whole class.
-*/
-
 public class HybridAPI {
 	private static final String TAG = "Hyb";
 
@@ -56,9 +44,6 @@ public class HybridAPI {
 	private final Sync sync;
 
 	private UUID currentAccount = UUID.fromString("b16fe0ba-df94-4bb6-ad03-aab7e47ca8c3");
-
-
-
 
 
 	public static HybridAPI getInstance() {
@@ -84,6 +69,9 @@ public class HybridAPI {
 		SyncWorkers.SyncWatcher.enqueue(accountUID);
 	}
 
+	public void stopListeningForChanges(@NonNull UUID accountUID) {
+		SyncWorkers.SyncWatcher.dequeue(accountUID);
+	}
 
 
 
@@ -99,7 +87,7 @@ public class HybridAPI {
 	// File
 	//---------------------------------------------------------------------------------------------
 
-	//TODO Should this exist as public? Or at all?
+	//TODO Should this exist as public? Or at all? Also, this is the only place HFile as an object is being used.
 	public HFile getFileProps(@NonNull UUID fileUID) throws FileNotFoundException {
 		LFile local = localRepo.getFileProps(fileUID);
 		return HFile.fromLocalFile(local);
@@ -108,7 +96,7 @@ public class HybridAPI {
 
 	public Uri getFileContent(@NonNull UUID fileUID) throws FileNotFoundException, ContentsNotFoundException, ConnectException {
 		//Grab the file properties, which also makes sure the file exists
-		HFile props = getFileProps(fileUID);
+		LFile props = localRepo.getFileProps(fileUID);
 
 		//Try to get the file contents from local. If they exist, return that.
 		try { return localRepo.getContentUri(props.checksum); }
@@ -133,7 +121,7 @@ public class HybridAPI {
 		newFile.islink = isLink;
 
 		//Create blank file contents
-		localRepo.writeContents(HFile.defaultChecksum, "".getBytes());
+		localRepo.writeContents(LFile.defaultChecksum, "".getBytes());
 
 		try {
 			lockLocal(fileUID);

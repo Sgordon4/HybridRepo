@@ -422,7 +422,7 @@ public class SyncTest {
 		Assertions.assertDoesNotThrow(() -> lRepo.getContentProps(smallFile.getName()));
 		Assertions.assertThrowsExactly(FileNotFoundException.class, () -> rRepo.getFileProps(fileUID));
 	}
-	
+
 
 
 	@Test

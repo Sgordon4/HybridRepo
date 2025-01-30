@@ -65,9 +65,9 @@ public class SyncWorkers {
 		}
 
 
-		public static void dequeue(@NonNull UUID fileuid) {
+		public static void dequeue(@NonNull UUID accountUID) {
 			WorkManager workManager = WorkManager.getInstance(MyApplication.getAppContext());
-			workManager.cancelUniqueWork("swatch_"+fileuid);
+			workManager.cancelUniqueWork("swatch_"+accountUID);
 		}
 
 
